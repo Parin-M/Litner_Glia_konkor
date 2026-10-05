@@ -31,9 +31,6 @@ jobs:
           mkdir -p assets
           base64 --decode assets/glia_app_icon.png.b64 > assets/glia_icon.png
 
-      - name: Generate native data
-        run: dart run tool/generate_native_data.dart
-
       - name: Set application id
         run: |
           sed -i 's/applicationId = "[^"]*"/applicationId = "com.glia.konkor"/' android/app/build.gradle.kts
