@@ -8,7 +8,7 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 ASSET_DIR.mkdir(parents=True, exist_ok=True)
 
 from huggingface_hub import snapshot_download
-snapshot_download(repo_id="shekar-ai/Noql", local_dir=str(MODEL_DIR), local_dir_use_symlinks=False)
+snapshot_download(repo_id="shekar-ai/Noql", local_dir=str(MODEL_DIR))
 
 import torch
 import torch.nn as nn
