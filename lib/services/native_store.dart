@@ -12,20 +12,21 @@ class GliaSettings {
     this.sound = false,
     this.shuffle = true,
     this.lowPower = false,
+    this.autoNext = false,
     this.delay = 2000,
     this.speed = 1.0,
     this.dailyGoal = 25,
     this.fontScale = 1.0,
   });
 
-  final bool dark, motion, haptics, sound, shuffle, lowPower;
+  final bool dark, motion, haptics, sound, shuffle, lowPower, autoNext;
   final String theme;
   final int delay, dailyGoal;
   final double speed, fontScale;
 
   GliaSettings copyWith({
     bool? dark, bool? motion, bool? haptics, bool? sound, bool? shuffle,
-    bool? lowPower, int? delay, int? dailyGoal, double? speed, double? fontScale, String? theme,
+    bool? lowPower, bool? autoNext, int? delay, int? dailyGoal, double? speed, double? fontScale, String? theme,
   }) => GliaSettings(
         dark: dark ?? this.dark,
         motion: motion ?? this.motion,
@@ -33,6 +34,7 @@ class GliaSettings {
         sound: sound ?? this.sound,
         shuffle: shuffle ?? this.shuffle,
         lowPower: lowPower ?? this.lowPower,
+        autoNext: autoNext ?? this.autoNext,
         theme: theme ?? this.theme,
         delay: delay ?? this.delay,
         dailyGoal: dailyGoal ?? this.dailyGoal,
@@ -42,7 +44,7 @@ class GliaSettings {
 
   Map<String, dynamic> toJson() => {
         'dark': dark, 'motion': motion, 'haptics': haptics, 'sound': sound,
-        'shuffle': shuffle, 'lowPower': lowPower, 'theme': theme, 'delay': delay,
+        'shuffle': shuffle, 'lowPower': lowPower, 'autoNext': autoNext, 'theme': theme, 'delay': delay,
         'dailyGoal': dailyGoal, 'speed': speed, 'fontScale': fontScale,
       };
 
@@ -53,6 +55,7 @@ class GliaSettings {
         sound: j['sound'] ?? false,
         shuffle: j['shuffle'] ?? true,
         lowPower: j['lowPower'] ?? false,
+        autoNext: j['autoNext'] ?? false,
         theme: (j['theme'] ?? 'amber').toString(),
         delay: (j['delay'] ?? 2000).toInt(),
         dailyGoal: (j['dailyGoal'] ?? 25).toInt(),
