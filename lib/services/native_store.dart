@@ -82,6 +82,7 @@ class GliaStore extends ChangeNotifier {
   /// Kept for compatibility with the previous native version and backups.
   Map<String, String> cardState = <String, String>{};
   Map<String, Map<String, dynamic>> answerLog = <String, Map<String, dynamic>>{};
+  Map<String, List<Map<String, dynamic>>> answerHistory = <String, List<Map<String, dynamic>>>{};
 
   GliaSettings settings = const GliaSettings();
   int reviewed = 0, correct = 0, streak = 1;
@@ -116,6 +117,7 @@ class GliaStore extends ChangeNotifier {
         answerLog = (j['answerLog'] as Map? ?? {}).map(
           (k, v) => MapEntry('$k', Map<String, dynamic>.from(v)),
         );
+        answerHistory = (j['answerHistory'] as Map? ?? {}).map((k, v) => MapEntry('$k', (v as List).map((e) => Map<String, dynamic>.from(e)).toList()));
         reviewed = (j['reviewed'] ?? 0).toInt();
         correct = (j['correct'] ?? 0).toInt();
         streak = (j['streak'] ?? 1).toInt();
@@ -155,6 +157,7 @@ class GliaStore extends ChangeNotifier {
       'nextReview': nextReview,
       'cardState': cardState,
       'answerLog': answerLog,
+      'answerHistory': answerHistory,
       'reviewed': reviewed,
       'correct': correct,
       'streak': streak,
@@ -162,6 +165,17 @@ class GliaStore extends ChangeNotifier {
     }));
     await _prefs?.setString(_settingsKey, jsonEncode(settings.toJson()));
     notifyListeners();
+  }
+
+  Duration _adaptiveInterval(int box, List<Map<String, dynamic>> history) {
+    final base = intervals[box] ?? Duration.zero;
+    if (history.length < 2 || base == Duration.zero) return base;
+    final recent = history.reversed.take(5).toList();
+    final wrong = recent.where((e) => e['result'] == 'review' || e['result'] == 'wrong').length;
+    final corrects = recent.where((e) => e['result'] == 'known').length;
+    if (wrong >= 2) return Duration(milliseconds: (base.inMilliseconds * .45).round());
+    if (corrects >= 3) return Duration(milliseconds: (base.inMilliseconds * 1.35).round());
+    return base;
   }
 
   Future<void> rateCard(LeitnerCard card, CardResult result) async {
@@ -183,31 +197,30 @@ class GliaStore extends ChangeNotifier {
       case CardResult.known:
         final nextBox = current < 5 ? current + 1 : 5;
         cardBox[card.id] = nextBox;
-        nextReview[card.id] = now.add(intervals[nextBox] ?? Duration.zero).millisecondsSinceEpoch;
+        final history = answerHistory[card.id] ?? const <Map<String, dynamic>>[];
+        nextReview[card.id] = now.add(_adaptiveInterval(nextBox, history)).millisecondsSinceEpoch;
         cardState[card.id] = nextBox >= 5 ? 'known' : 'learning';
         correct++;
         break;
     }
 
     reviewed++;
-    answerLog[card.id] = {
-      'box': cardBox[card.id],
-      'result': result.name,
-      'time': now.millisecondsSinceEpoch,
-    };
+    final event = <String, dynamic>{'box': cardBox[card.id], 'result': result.name, 'time': now.millisecondsSinceEpoch};
+    answerLog[card.id] = event;
+    final history = answerHistory.putIfAbsent(card.id, () => <Map<String, dynamic>>[]);
+    history.add(event);
+    if (history.length > 20) history.removeRange(0, history.length - 20);
     await save();
   }
 
   Future<void> answer(SpellingQuestion q, bool ok) async {
     reviewed++;
     if (ok) correct++;
-    answerLog[q.id] = {
-      'sentence': q.sentence,
-      'lesson': q.lesson,
-      'answer': q.options[q.correctIndex],
-      'status': ok ? 'correct' : 'wrong',
-      'time': DateTime.now().millisecondsSinceEpoch,
-    };
+    final event = <String, dynamic>{'sentence': q.sentence, 'lesson': q.lesson, 'answer': q.options[q.correctIndex], 'status': ok ? 'correct' : 'wrong', 'time': DateTime.now().millisecondsSinceEpoch};
+    answerLog[q.id] = event;
+    final history = answerHistory.putIfAbsent(q.id, () => <Map<String, dynamic>>[]);
+    history.add(event);
+    if (history.length > 20) history.removeRange(0, history.length - 20);
     await save();
   }
 
@@ -221,6 +234,7 @@ class GliaStore extends ChangeNotifier {
     nextReview.clear();
     cardState.clear();
     answerLog.clear();
+    answerHistory.clear();
     reviewed = 0;
     correct = 0;
     streak = 1;
@@ -260,6 +274,7 @@ class GliaStore extends ChangeNotifier {
     answerLog = (value['answerLog'] as Map? ?? {}).map(
       (k, v) => MapEntry('$k', Map<String, dynamic>.from(v)),
     );
+    answerHistory = (value['answerHistory'] as Map? ?? {}).map((k, v) => MapEntry('$k', (v as List).map((e) => Map<String, dynamic>.from(e)).toList()));
     reviewed = (value['reviewed'] ?? value['answered'] ?? 0).toInt();
     correct = (value['correct'] ?? 0).toInt();
     streak = (value['streak'] ?? 1).toInt();
