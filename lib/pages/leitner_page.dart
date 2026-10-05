@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../core/app_colors.dart';
@@ -39,14 +40,22 @@ class _LeitnerPageState extends State<LeitnerPage> {
     super.dispose();
   }
 
-  Future<bool> _handleBack() async {
-    return !(await _service.goBackIfPossible());
+  Future<void> _handleBack() async {
+    final handledByWebView = await _service.goBackIfPossible();
+    if (!handledByWebView) {
+      await SystemNavigator.pop();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _handleBack,
+    return PopScope<void>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleBack();
+        }
+      },
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
