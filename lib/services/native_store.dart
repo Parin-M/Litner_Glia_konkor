@@ -6,6 +6,7 @@ import '../models/native_models.dart';
 class GliaSettings {
   const GliaSettings({
     this.dark = true,
+    this.theme = 'amber',
     this.motion = true,
     this.haptics = true,
     this.sound = false,
@@ -18,12 +19,13 @@ class GliaSettings {
   });
 
   final bool dark, motion, haptics, sound, shuffle, lowPower;
+  final String theme;
   final int delay, dailyGoal;
   final double speed, fontScale;
 
   GliaSettings copyWith({
     bool? dark, bool? motion, bool? haptics, bool? sound, bool? shuffle,
-    bool? lowPower, int? delay, int? dailyGoal, double? speed, double? fontScale,
+    bool? lowPower, int? delay, int? dailyGoal, double? speed, double? fontScale, String? theme,
   }) => GliaSettings(
         dark: dark ?? this.dark,
         motion: motion ?? this.motion,
@@ -31,6 +33,7 @@ class GliaSettings {
         sound: sound ?? this.sound,
         shuffle: shuffle ?? this.shuffle,
         lowPower: lowPower ?? this.lowPower,
+        theme: theme ?? this.theme,
         delay: delay ?? this.delay,
         dailyGoal: dailyGoal ?? this.dailyGoal,
         speed: speed ?? this.speed,
@@ -39,7 +42,7 @@ class GliaSettings {
 
   Map<String, dynamic> toJson() => {
         'dark': dark, 'motion': motion, 'haptics': haptics, 'sound': sound,
-        'shuffle': shuffle, 'lowPower': lowPower, 'delay': delay,
+        'shuffle': shuffle, 'lowPower': lowPower, 'theme': theme, 'delay': delay,
         'dailyGoal': dailyGoal, 'speed': speed, 'fontScale': fontScale,
       };
 
@@ -50,6 +53,7 @@ class GliaSettings {
         sound: j['sound'] ?? false,
         shuffle: j['shuffle'] ?? true,
         lowPower: j['lowPower'] ?? false,
+        theme: (j['theme'] ?? 'amber').toString(),
         delay: (j['delay'] ?? 2000).toInt(),
         dailyGoal: (j['dailyGoal'] ?? 25).toInt(),
         speed: (j['speed'] ?? 1.0).toDouble(),
