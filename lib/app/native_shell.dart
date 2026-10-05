@@ -118,21 +118,49 @@ class SmartCenter extends StatelessWidget {
       Card(child: ListTile(leading: Icon(icon, color: teal2), title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text(subtitle), trailing: const Icon(Icons.chevron_left), onTap: onTap));
 }
 
-class ConfusionScreen extends StatelessWidget {
+class ConfusionScreen extends StatefulWidget {
   const ConfusionScreen({super.key, required this.data, required this.store});
   final NativeData data; final GliaStore store;
-  @override Widget build(BuildContext c) {
-    final groups = <String, List<LeitnerCard>>{};
-    for (final card in data.allCards) { groups.putIfAbsent(card.lesson, () => []).add(card); }
-    return Scaffold(appBar: AppBar(title: const Text('تشخیص اشتباهات مشابه')), body: ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('کارت‌های هم‌درس با خطای تکرارشونده را کنار هم ببین:', style: TextStyle(color: dim)),
-      for (final e in groups.entries.where((e) => e.value.length > 1).take(20))
-        Card(child: ExpansionTile(title: Text(e.key), subtitle: Text('${e.value.length} کارت'), children: [
-          for (final card in SmartEngine.smartQueue(store, e.value, limit: 5))
-            ListTile(title: Text(card.front), subtitle: Text(card.back)),
-        ])),
-    ]));
+  @override State<ConfusionScreen> createState() => _ConfusionScreenState();
+}
+
+class _ConfusionScreenState extends State<ConfusionScreen> {
+  List<ConfusionPair> pairs = const [];
+  bool loading = true;
+  @override void initState() { super.initState(); _scan(); }
+  Future<void> _scan() async {
+    final candidates = SmartEngine.rank(widget.store, widget.data.allCards)
+        .where((x) => x.difficulty == SmartDifficulty.hard || x.difficulty == SmartDifficulty.critical)
+        .take(20).map((x) => x.card).toList();
+    final found = <ConfusionPair>[];
+    if (await NoqlService.instance.init()) {
+      for (final card in candidates) {
+        final matches = await NoqlService.instance.similarToCard(card, widget.data.allCards, limit: 3);
+        for (final m in matches) {
+          if (m.score >= .60 && card.id != m.card.id) {
+            final already = found.any((p) => (p.a.id == card.id && p.b.id == m.card.id) || (p.a.id == m.card.id && p.b.id == card.id));
+            if (!already) found.add(ConfusionPair(card, m.card, m.score));
+          }
+        }
+      }
+    }
+    found.sort((a,b) => b.score.compareTo(a.score));
+    if (mounted) setState(() { pairs = found.take(20).toList(); loading = false; });
   }
+  @override Widget build(BuildContext c) => Scaffold(
+    appBar: AppBar(title: const Text('تشخیص اشتباهات مشابه')),
+    body: loading ? const Center(child: CircularProgressIndicator()) : pairs.isEmpty
+      ? const Center(child: Text('هنوز جفتِ مشکوک کافی پیدا نشده است. چند مرور انجام بده.'))
+      : ListView(padding: const EdgeInsets.all(16), children: [
+          const Text('Noql کارت‌های معنایی نزدیک را با سابقه خطا ترکیب می‌کند تا جفت‌های گیج‌کننده را پیدا کند.', style: TextStyle(color: dim, height: 1.7)),
+          const SizedBox(height: 10),
+          for (final p in pairs) Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [Expanded(child: Text(p.a.front, style: const TextStyle(fontWeight: FontWeight.w900))), Text('\${(p.score * 100).round()}٪', style: const TextStyle(color: rose, fontWeight: FontWeight.w900))]),
+            const Divider(), Text(p.b.front, style: const TextStyle(fontWeight: FontWeight.w900)), const SizedBox(height: 6),
+            const Text('ممکن است این دو کارت به‌خاطر شباهت معنایی با هم قاطی شوند.', style: TextStyle(color: dim)),
+          ]))),
+        ]),
+  );
 }
 
 class WeaknessScreen extends StatelessWidget {
