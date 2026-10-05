@@ -32,7 +32,7 @@ class NoqlService {
       final tokenizerBytes = (await rootBundle.load('assets/ai/tokenizer.json'))
           .buffer
           .asUint8List();
-      _tokenizer = await TokenizerJsonLoader.fromJsonString(String.fromCharCodes(tokenizerBytes));
+      _tokenizer = TokenizerJsonLoader.fromJsonString(String.fromCharCodes(tokenizerBytes));
 
       _runtime = OnnxRuntime();
       _session = await _runtime!.createSessionFromAsset('assets/ai/noql.onnx');
@@ -81,7 +81,7 @@ class NoqlService {
       final output = outputs[session.outputNames.first];
       if (output == null) return const [];
       final raw = await output.asFlattenedList();
-      final flat = raw is List && raw.isNotEmpty && raw.first is List ? raw.expand((e) => e as List).toList() : raw;
+      final flat = raw;
       return flat.map((e) => (e as num).toDouble()).toList();
     } finally {
       await inputIds.dispose();
