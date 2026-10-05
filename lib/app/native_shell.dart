@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/native_models.dart';
 import '../services/native_store.dart';
 import '../services/smart_engine.dart';
+import '../services/noql_service.dart';
 
 const bg=Color(0xFF0B0F1A),surface=Color(0xFF171E2E),surface2=Color(0xFF1D2740),gold=Color(0xFFE8A94C),gold2=Color(0xFFF4C777),teal=Color(0xFF4FBDBA),teal2=Color(0xFF78D9D6),rose=Color(0xFFE8674F),dim=Color(0xFF8B93A7);
 class NativeShell extends StatefulWidget{const NativeShell({super.key});@override State<NativeShell> createState()=>_NativeShellState();}
@@ -62,6 +63,7 @@ class SmartCenter extends StatelessWidget {
     return Scaffold(appBar:AppBar(title:const Text('مرکز هوشمند')),body:ListView(padding:const EdgeInsets.all(16),children:[
       Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(children:[const Icon(Icons.psychology_alt,size:46,color:teal2),const SizedBox(height:8),const Text('آمادگی هوشمند',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),const SizedBox(height:10),Text('$ready٪',style:const TextStyle(fontSize:38,fontWeight:FontWeight.w900,color:gold2)),const SizedBox(height:8),LinearProgressIndicator(value:ready/100,color:teal2)]))),
       Card(child:ListTile(leading:const Icon(Icons.auto_awesome,color:gold2),title:const Text('مرور هوشمند'),subtitle:Text('$due کارت با اولویت بالا'),onTap:(){final q=SmartEngine.smartQueue(store,cards);Navigator.push(c,MaterialPageRoute(builder:(_)=>Study(title:'مرور هوشمند',cards:q,store:store,dueOnly:false)));})),
+      Card(child:ListTile(leading:const Icon(Icons.psychology_alt,color:teal2),title:const Text('AI آفلاین گلیا · Noql'),subtitle:const Text('پیدا کردن کارت‌های معنایی مشابه، بدون اینترنت'),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>NoqlSearch(data:data,store:store))))),
       Card(child:ListTile(leading:const Icon(Icons.tune,color:teal2),title:const Text('آزمون تطبیقی'),subtitle:const Text('سختی سؤال بعدی با عملکردت تغییر می‌کند'),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>AdaptiveQuiz(data:data,store:store))))),
       Card(child:ListTile(leading:const Icon(Icons.nights_stay,color:Color(0xFFB58CFF)),title:const Text('شب قبل آزمون'),subtitle:const Text('مرور سریع کارت‌های ضعیف و پرتکرار'),onTap:(){final q=SmartEngine.smartQueue(store,cards,limit:30);Navigator.push(c,MaterialPageRoute(builder:(_)=>Study(title:'شب قبل آزمون',cards:q,store:store,dueOnly:false)));})),
       Card(child:ListTile(leading:const Icon(Icons.local_fire_department,color:rose),title:const Text('چالش روزانه'),subtitle:const Text('۲۰ کارت با تمرکز روی نقاط ضعف'),onTap:(){final q=SmartEngine.challenge(store,cards);Navigator.push(c,MaterialPageRoute(builder:(_)=>Study(title:'چالش روزانه',cards:q,store:store,dueOnly:false)));})),
@@ -76,6 +78,57 @@ class SmartCenter extends StatelessWidget {
   }
 }
 
+class NoqlSearch extends StatefulWidget {
+  const NoqlSearch({super.key, required this.data, required this.store});
+  final NativeData data;
+  final GliaStore store;
+  @override State<NoqlSearch> createState() => _NoqlSearchState();
+}
+
+class _NoqlSearchState extends State<NoqlSearch> {
+  final controller = TextEditingController();
+  List<NoqlMatch> results = const [];
+  bool loading = false;
+  bool ready = false;
+  @override void initState() { super.initState(); _init(); }
+  Future<void> _init() async {
+    final ok = await NoqlService.instance.init();
+    if (mounted) setState(() => ready = ok);
+  }
+  Future<void> search() async {
+    final query = controller.text.trim();
+    if (query.isEmpty || loading) return;
+    setState(() => loading = true);
+    final r = await NoqlService.instance.similarCards(query, widget.data.allCards, limit: 10);
+    if (mounted) setState(() { results = r; loading = false; });
+  }
+  @override void dispose() { controller.dispose(); super.dispose(); }
+  @override Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('AI آفلاین گلیا')),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [const Icon(Icons.psychology_alt, color: teal2, size: 30), const SizedBox(width: 10), const Expanded(child: Text('Noql · موتور معنایی فارسی', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900))), Icon(ready ? Icons.check_circle : Icons.hourglass_top, color: ready ? teal : gold2)]),
+          const SizedBox(height: 10),
+          const Text('مدل ۱۱.۹ میلیون پارامتری روی خود دستگاه اجرا می‌شود و برای پیدا کردن کارت‌های مشابه استفاده می‌شود.', style: TextStyle(color: dim, height: 1.7)),
+        ]))),
+        const SizedBox(height: 10),
+        TextField(controller: controller, textInputAction: TextInputAction.search, onSubmitted: (_) => search(), decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'یک کلمه یا مفهوم بنویس', hintText: 'مثلاً پذیرفتن، حافظه، فشار خون...', border: OutlineInputBorder())),
+        const SizedBox(height: 10),
+        FilledButton.icon(onPressed: !ready || loading ? null : search, icon: loading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.auto_awesome), label: Text(loading ? 'در حال تحلیل...' : 'پیدا کن')),
+        const SizedBox(height: 10),
+        if (!ready) const Card(child: ListTile(leading: Icon(Icons.info_outline, color: gold2), title: Text('در حال آماده‌سازی AI'), subtitle: Text('مدل و نمایه به‌صورت آفلاین داخل APK قرار می‌گیرند.'))),
+        for (final item in results) Card(child: ListTile(
+          leading: CircleAvatar(backgroundColor: teal.withValues(alpha: .14), child: Text('\${(item.score * 100).round()}%', style: const TextStyle(color: teal2, fontSize: 11))),
+          title: Text(item.card.front, style: const TextStyle(fontWeight: FontWeight.w900)),
+          subtitle: Text('\${item.card.back}\n\${item.card.lesson}', maxLines: 2, overflow: TextOverflow.ellipsis),
+          isThreeLine: true,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Study(title: 'تمرین مشابه', cards: [item.card], store: widget.store, dueOnly: false))),
+        )),
+      ]),
+    );
+  }
+}
 class AdaptiveQuiz extends StatefulWidget { const AdaptiveQuiz({super.key,required this.data,required this.store}); final NativeData data; final GliaStore store; @override State<AdaptiveQuiz> createState()=>_AdaptiveQuizState(); }
 class _AdaptiveQuizState extends State<AdaptiveQuiz> {
   late List<SpellingQuestion> qs; int i=0; int score=0; int? selected; bool sent=false;
