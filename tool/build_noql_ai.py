@@ -64,10 +64,17 @@ for name in ["tokenizer.json"]:
 with open("assets/generated_original_deck.json", "r", encoding="utf-8") as f:
     cards = json.load(f)
 with open("assets/generated_persian_pack.json", "r", encoding="utf-8") as f:
-    cards += json.load(f)
+    persian_pack = json.load(f)
+
+if not isinstance(persian_pack, dict) or not isinstance(persian_pack.get("vocabCards"), list):
+    raise RuntimeError("Invalid generated_persian_pack.json: expected a vocabCards list")
+
+cards += persian_pack["vocabCards"]
 
 texts = []
 for c in cards:
+    if not isinstance(c, dict):
+        raise RuntimeError(f"Invalid card entry: expected object, got {type(c).__name__}")
     texts.append(" | ".join(x for x in [c.get("front",""), c.get("back",""), c.get("extra",""), c.get("lesson","")] if x))
 
 embeddings = model.encode(
