@@ -54,45 +54,51 @@ jobs:
           base64 --decode assets/glia_app_icon.png.b64 > assets/glia_icon.png
 
       - name: Configure release signing
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         shell: bash
         run: |
           set -euo pipefail
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release.jks
+          keytool -genkeypair -v -keystore android/release.jks \
+            -storepass android -keypass android \
+            -alias glia-release -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Glia Konkor, OU=Android, O=Glia, L=, ST=, C=AZ"
           cat > android/key.properties <<EOF
-          storePassword=$ANDROID_KEYSTORE_PASSWORD
-          keyPassword=$ANDROID_KEY_PASSWORD
-          keyAlias=$ANDROID_KEY_ALIAS
-          storeFile=release.jks
+          storePassword=android
+          keyPassword=android
+          keyAlias=glia-release
+          storeFile=../release.jks
           EOF
           python3 - <<'PY'
           from pathlib import Path
           p = Path("android/app/build.gradle.kts")
           if p.exists():
               s = p.read_text()
-              header = 'import java.util.Properties\n\nval keystoreProperties = Properties().apply {\n    val file = rootProject.file("key.properties")\n    if (file.exists()) load(file.inputStream())\n}\n\n'
+              header = '''import java.util.Properties
+
+          val keystoreProperties = Properties().apply {
+              val file = rootProject.file("key.properties")
+              if (file.exists()) load(file.inputStream())
+          }
+
+          '''
               if "val keystoreProperties = Properties()" not in s:
                   s = header + s
-              block = '''    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
-        }
-    }
-'''
+              signing = '''    signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties["keyAlias"] as String
+                      keyPassword = keystoreProperties["keyPassword"] as String
+                      storeFile = file(keystoreProperties["storeFile"] as String)
+                      storePassword = keystoreProperties["storePassword"] as String
+                  }
+              }
+
+          '''
               if 'create("release")' not in s:
-                  s = s.replace("    buildTypes {", block + "    buildTypes {", 1)
+                  s = s.replace("    buildTypes {", signing + "    buildTypes {", 1)
               s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+              if 'signingConfig = signingConfigs.getByName("release")' not in s:
+                  s = s.replace('release {', 'release {\n        signingConfig = signingConfigs.getByName("release")', 1)
               p.write_text(s)
           PY
-          rm -f android/release.jks android/key.properties
 
       - name: Install dependencies
         run: flutter pub get
