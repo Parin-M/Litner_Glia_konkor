@@ -9,7 +9,37 @@ import '../services/native_store.dart';
 
 const bg=Color(0xFF0B0F1A),surface=Color(0xFF171E2E),surface2=Color(0xFF1D2740),gold=Color(0xFFE8A94C),gold2=Color(0xFFF4C777),teal=Color(0xFF4FBDBA),teal2=Color(0xFF78D9D6),rose=Color(0xFFE8674F),dim=Color(0xFF8B93A7);
 class NativeShell extends StatefulWidget{const NativeShell({super.key});@override State<NativeShell> createState()=>_NativeShellState();}
-class _NativeShellState extends State<NativeShell>{NativeData?data;GliaStore?store;Object?error;@override void initState(){super.initState();load();}Future<void>load()async{try{final d=NativeData.fromJson(await rootBundle.loadString('assets/generated_original_deck.json'),await rootBundle.loadString('assets/generated_persian_pack.json'));final s=GliaStore(d);await s.init();if(mounted)setState((){data=d;store=s;});}catch(e){if(mounted)setState(()=>error=e);}}@override Widget build(BuildContext c){if(error!=null)return MaterialApp(home:Scaffold(body:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.error_outline,size:60,color:rose),Text('$error'),FilledButton(onPressed:load,child:const Text('تلاش دوباره'))]))));if(data==null||store==null)return const MaterialApp(home:Scaffold(body:Center(child:CircularProgressIndicator())));return AnimatedBuilder(animation:store!,builder:(context,child)=>MaterialApp(debugShowCheckedModeBanner:false,title:'گلیا کنکور',theme:ThemeData(useMaterial3:true,brightness:store!.settings.dark?Brightness.dark:Brightness.light,scaffoldBackgroundColor:store!.settings.dark?bg:const Color(0xFFF6F2E8),colorScheme:ColorScheme.fromSeed(seedColor:gold,brightness:store!.settings.dark?Brightness.dark:Brightness.light)),home:Directionality(textDirection:TextDirection.rtl,child:Home(data:data!,store:store!))));}}
+class _NativeShellState extends State<NativeShell>{NativeData?data;GliaStore?store;Object?error;@override void initState(){super.initState();load();}Future<void>load()async{try{final d=NativeData.fromJson(await rootBundle.loadString('assets/generated_original_deck.json'),await rootBundle.loadString('assets/generated_persian_pack.json'));final s=GliaStore(d);await s.init();if(mounted)setState((){data=d;store=s;});}catch(e){if(mounted)setState(()=>error=e);}}@override Widget build(BuildContext c){if(error!=null)return MaterialApp(home:Scaffold(body:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.error_outline,size:60,color:rose),Text('$error'),FilledButton(onPressed:load,child:const Text('تلاش دوباره'))]))));if(data==null||store==null)return const MaterialApp(home:Scaffold(body:Center(child:CircularProgressIndicator())));return AnimatedBuilder(animation:store!,builder:(context,child){
+  final dark=store!.settings.dark;
+  final cs=ColorScheme.fromSeed(seedColor:dark?gold:const Color(0xFF8A5A12),brightness:dark?Brightness.dark:Brightness.light).copyWith(
+    primary:dark?gold2:const Color(0xFF8A5A12),
+    onPrimary:dark?const Color(0xFF1A1207):Colors.white,
+    secondary:dark?teal2:const Color(0xFF176B69),
+    onSecondary:dark?const Color(0xFF061515):Colors.white,
+    surface:dark?surface:const Color(0xFFFFFCF5),
+    onSurface:dark?Colors.white:const Color(0xFF1C1B18),
+    surfaceContainerHighest:dark?surface2:const Color(0xFFEAE4D8),
+    onSurfaceVariant:dark?const Color(0xFFD2D6E0):const Color(0xFF4B4A45),
+    outline:dark?const Color(0xFF596276):const Color(0xFF77736A),
+  );
+  final text=dark?Colors.white:const Color(0xFF202124);
+  final muted=dark?const Color(0xFFB8C0D0):const Color(0xFF5F5C55);
+  return MaterialApp(
+    debugShowCheckedModeBanner:false,title:'گلیا کنکور',
+    theme:ThemeData(
+      useMaterial3:true,brightness:dark?Brightness.dark:Brightness.light,
+      scaffoldBackgroundColor:dark?bg:const Color(0xFFF6F2E8),colorScheme:cs,
+      cardTheme:CardThemeData(color:dark?surface:Colors.white,surfaceTintColor:Colors.transparent,margin:const EdgeInsets.symmetric(vertical:4)),
+      appBarTheme:AppBarTheme(backgroundColor:dark?bg:const Color(0xFFF6F2E8),foregroundColor:text,surfaceTintColor:Colors.transparent),
+      drawerTheme:DrawerThemeData(backgroundColor:dark?surface:Colors.white),
+      navigationBarTheme:NavigationBarThemeData(backgroundColor:dark?surface:Colors.white,indicatorColor:dark?surface2:const Color(0xFFE8D5AE),labelTextStyle:WidgetStatePropertyAll(TextStyle(color:dark?Colors.white:const Color(0xFF302F2B),fontWeight:FontWeight.w700))),
+      listTileTheme:ListTileThemeData(textColor:text,subtitleTextStyle:TextStyle(color:muted),iconColor:dark?teal2:const Color(0xFF176B69)),
+      inputDecorationTheme:InputDecorationTheme(labelStyle:TextStyle(color:muted),hintStyle:TextStyle(color:muted)),
+      textTheme:ThemeData(brightness:dark?Brightness.dark:Brightness.light).textTheme.apply(bodyColor:text,displayColor:text),
+    ),
+    home:Directionality(textDirection:TextDirection.rtl,child:Home(data:data!,store:store!)),
+  );
+}};
 class Logo extends StatelessWidget{const Logo({super.key,this.size=52});final double size;@override Widget build(BuildContext c)=>ClipRRect(borderRadius:BorderRadius.circular(size*.2),child:Image.asset('assets/glia_icon.png',width:size,height:size,fit:BoxFit.cover,errorBuilder:(context,error,stackTrace)=>Container(width:size,height:size,color:gold,child:const Icon(Icons.psychology,color:Colors.white))));}
 class Home extends StatefulWidget{const Home({super.key,required this.data,required this.store});final NativeData data;final GliaStore store;@override State<Home> createState()=>_HomeState();}
 class _HomeState extends State<Home>{int tab=0;void open(String t,List<LeitnerCard>x)=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Study(title:t,cards:x,store:widget.store)));Widget nav(String t,IconData i,VoidCallback f)=>ListTile(leading:Icon(i),title:Text(t),onTap:f);@override Widget build(BuildContext c)=>Scaffold(drawer:Drawer(child:SafeArea(child:ListView(children:[const SizedBox(height:10),const ListTile(leading:Logo(size:52),title:Text('گلیا کنکور',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:teal2)),subtitle:Text('لایتنر هوشمند',style:TextStyle(color:dim))),const Divider(),nav('خانه',Icons.home,()=>setState(()=>tab=0)),nav('دسته‌ها',Icons.grid_view,()=>setState(()=>tab=1)),nav('آمار',Icons.insights,()=>setState(()=>tab=2)),nav('تنظیمات حرفه‌ای',Icons.settings,()=>setState(()=>tab=3)),nav('یادگرفته‌ها',Icons.check_circle,(){Navigator.pop(context);Navigator.push(context,MaterialPageRoute(builder:(_)=>Status(data:widget.data,store:widget.store,known:true)));}),nav('نیازمند مرور',Icons.timelapse,(){Navigator.pop(context);Navigator.push(context,MaterialPageRoute(builder:(_)=>Status(data:widget.data,store:widget.store,known:false)));}),const Divider(),nav('کانال گلیا کنکور',Icons.telegram,()=>launchUrl(Uri.parse('https://t.me/Glia_konkor'),mode:LaunchMode.externalApplication))]))),body:IndexedStack(index:tab,children:[Dashboard(data:widget.data,store:widget.store,open:open),Categories(data:widget.data,store:widget.store,open:open),Stats(data:widget.data,store:widget.store),Settings(data:widget.data,store:widget.store)]),bottomNavigationBar:NavigationBar(selectedIndex:tab,onDestinationSelected:(i)=>setState(()=>tab=i),destinations:const[NavigationDestination(icon:Icon(Icons.home),label:'خانه'),NavigationDestination(icon:Icon(Icons.grid_view),label:'دسته‌ها'),NavigationDestination(icon:Icon(Icons.insights),label:'آمار'),NavigationDestination(icon:Icon(Icons.settings),label:'تنظیمات')]));}
