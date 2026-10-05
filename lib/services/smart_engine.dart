@@ -94,12 +94,13 @@ class SmartEngine {
       return 'هنوز داده کافی نداریم؛ یک مرور کوتاه شروع کن تا مربی هوشمند الگوی یادگیری‌ات را پیدا کند.';
     }
     if (weak.isNotEmpty) {
-      return 'تمرکز بعدی روی «$weak.keys.first» است. $due کارت موعددار داری و دقت فعلی‌ات $accuracy٪ است.';
+      final weakLesson = weak.keys.first;
+      return 'تمرکز بعدی روی «$weakLesson» است. $due کارت موعددار داری و دقت فعلی‌ات $accuracy٪ است.';
     }
     if (accuracy < 70) {
-      return 'امروز بهتر است مرورهای کوتاه و تکراری داشته باشی؛ دقت فعلی ${accuracy}٪ است.';
+      return 'امروز بهتر است مرورهای کوتاه و تکراری داشته باشی؛ دقت فعلی $accuracy٪ است.';
     }
-    return 'عملکردت خوب است؛ ${due} کارت موعددار را جمع کن و سپس یک چالش کوتاه انجام بده.';
+    return 'عملکردت خوب است؛ $due کارت موعددار را جمع کن و سپس یک چالش کوتاه انجام بده.';
   }
 
   static List<LeitnerCard> challenge(
