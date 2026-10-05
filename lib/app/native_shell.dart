@@ -85,7 +85,7 @@ class SmartCenter extends StatelessWidget {
           Text('$ready٪', style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: gold2)),
           LinearProgressIndicator(value: ready / 100, color: teal2),
           const SizedBox(height: 10),
-          Text('$due موعددار · $critical.length بحرانی · $falseMastery مشکوک به یادگیری کاذب · $risk٪ ریسک فراموشی',
+          Text('$due موعددار · ${critical.length} بحرانی · $falseMastery مشکوک به یادگیری کاذب · $risk٪ ریسک فراموشی',
               textAlign: TextAlign.center, style: const TextStyle(color: dim)),
         ]))),
 
@@ -558,7 +558,11 @@ class _StudyState extends State<Study> {
     await widget.store.rateCard(card, result);
     deck.removeAt(index);
     if (result == CardResult.review) deck.add(card);
-    if (deck.isNotEmpty) index %= deck.length;
+    if (deck.length > 1) {
+      final ranked = SmartEngine.rank(widget.store, deck).map((x) => x.card).toList();
+      deck = ranked;
+    }
+    if (deck.isNotEmpty) index = 0;
     setState(() => flip = false);
     if (widget.store.settings.haptics) {
       HapticFeedback.selectionClick();
