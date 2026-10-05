@@ -1,5 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+const _bg = Color(0xFF0B0F1A);
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,10 +18,11 @@ class GliaLeitnerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'گلیا کنکور',
+      title: 'لایتنر هوشمند | گلیا کنکور',
       theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: _bg,
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFF0B0F1A),
       ),
       home: const LeitnerPage(),
     );
@@ -40,10 +46,18 @@ class _LeitnerPageState extends State<LeitnerPage> {
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF0B0F1A))
+      ..setBackgroundColor(_bg)
+      ..addJavaScriptChannel(
+        'GliaBridge',
+        onMessageReceived: (_) {},
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) {
+          onPageFinished: (_) async {
+            await _applyBrandingOverlay();
+            if (mounted) setState(() => _loading = false);
+          },
+          onWebResourceError: (_) {
             if (mounted) setState(() => _loading = false);
           },
         ),
@@ -51,10 +65,54 @@ class _LeitnerPageState extends State<LeitnerPage> {
       ..loadFlutterAsset('assets/leitner.html');
   }
 
+  Future<void> _applyBrandingOverlay() async {
+    final bytes = await rootBundle.load('assets/glia_app_icon.png');
+    final image64 = base64Encode(bytes.buffer.asUint8List());
+    final js = '''
+(() => {
+  const data = 'data:image/png;base64,$image64';
+  const splash = document.querySelector('#splashLogo');
+  if (splash) {
+    const oldSvg = splash.querySelector('svg');
+    if (oldSvg) oldSvg.remove();
+    let img = splash.querySelector('img.glia-app-logo');
+    if (!img) {
+      img = document.createElement('img');
+      img.className = 'glia-app-logo';
+      img.alt = 'گلیا کنکور';
+      img.style.cssText = 'width:100%;height:100%;display:block;object-fit:cover;border-radius:22px;';
+      splash.insertBefore(img, splash.firstChild);
+    }
+    img.src = data;
+  }
+
+  const mark = document.querySelector('.brand-mark');
+  if (mark) {
+    const svg = mark.querySelector('svg');
+    if (svg) svg.remove();
+    let img = mark.querySelector('img.glia-brand-mark');
+    if (!img) {
+      img = document.createElement('img');
+      img.className = 'glia-brand-mark';
+      img.alt = '';
+      img.style.cssText = 'width:100%;height:100%;display:block;object-fit:cover;border-radius:8px;';
+      mark.appendChild(img);
+    }
+    img.src = data;
+  }
+})();
+''';
+    try {
+      await _controller.runJavaScript(js);
+    } catch (_) {
+      // Cosmetic only; the original HTML application still runs.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0F1A),
+      backgroundColor: _bg,
       body: SafeArea(
         bottom: false,
         child: Stack(
@@ -63,11 +121,15 @@ class _LeitnerPageState extends State<LeitnerPage> {
             WebViewWidget(controller: _controller),
             if (_loading)
               const ColoredBox(
-                color: Color(0xFF0B0F1A),
+                color: _bg,
                 child: Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Color(0xFFE8A94C),
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFE8A94C),
+                      strokeWidth: 2.6,
+                    ),
                   ),
                 ),
               ),
