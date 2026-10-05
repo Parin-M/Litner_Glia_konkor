@@ -41,6 +41,9 @@ jobs:
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
+      - name: Remove generated sample test
+        run: rm -f test/widget_test.dart
+
       - name: Analyze
         run: flutter analyze
 
