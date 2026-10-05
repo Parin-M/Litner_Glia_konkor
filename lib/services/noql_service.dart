@@ -88,6 +88,16 @@ class NoqlService {
     }
   }
 
+  Future<List<NoqlMatch>> similarToCard(
+    LeitnerCard source,
+    List<LeitnerCard> cards, {
+    int limit = 6,
+  }) async {
+    final query = '\${source.front} \${source.back} \${source.extra}';
+    final matches = await similarCards(query, cards, limit: limit + 1);
+    return matches.where((m) => m.card.id != source.id).take(limit).toList();
+  }
+
   Future<List<NoqlMatch>> similarCards(
     String query,
     List<LeitnerCard> cards, {
