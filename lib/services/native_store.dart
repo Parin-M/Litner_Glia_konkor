@@ -247,6 +247,7 @@ class GliaStore extends ChangeNotifier {
         'nextReview': nextReview,
         'cardState': cardState,
         'answerLog': answerLog,
+        'answerHistory': answerHistory,
         'reviewed': reviewed,
         'correct': correct,
         'streak': streak,
