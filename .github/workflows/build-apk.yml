@@ -27,6 +27,17 @@ jobs:
       - name: Remove Flutter template test
         run: rm -f test/widget_test.dart
 
+      - name: Configure Android 16 KB compatibility
+        shell: bash
+        run: |
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i '/android {/a\    ndkVersion = "28.0.13004108"' android/app/build.gradle.kts
+            sed -i '/android {/a\    packaging { jniLibs { useLegacyPackaging = false } }' android/app/build.gradle.kts
+          elif [ -f android/app/build.gradle ]; then
+            sed -i '/android {/a\    ndkVersion "28.0.13004108"' android/app/build.gradle
+            sed -i '/android {/a\    packagingOptions { jniLibs { useLegacyPackaging false } }' android/app/build.gradle
+          fi
+
       - name: Restore app icon
         run: |
           mkdir -p assets
@@ -42,7 +53,8 @@ jobs:
         run: flutter analyze
 
       - name: Build release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --target-platform android-arm64
+
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
