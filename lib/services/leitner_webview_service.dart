@@ -68,7 +68,7 @@ class LeitnerWebViewService {
           },
           onNavigationRequest: _onNavigationRequest,
           onWebResourceError: (error) {
-            if (error.isForMainFrame) {
+            if (error.isForMainFrame == true) {
               state.value = state.value.copyWith(
                 status: WebViewShellStatus.error,
                 errorMessage:
