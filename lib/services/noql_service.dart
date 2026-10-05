@@ -81,7 +81,8 @@ class NoqlService {
       final output = outputs[session.outputNames.first];
       if (output == null) return const [];
       final raw = await output.asFlattenedList();
-      final flat = raw is List && raw.isNotEmpty && raw.first is List ? raw.expand((e) => e as List).toList() : raw;\n      return flat.map((e) => (e as num).toDouble()).toList();
+      final flat = raw is List && raw.isNotEmpty && raw.first is List ? raw.expand((e) => e as List).toList() : raw;
+      return flat.map((e) => (e as num).toDouble()).toList();
     } finally {
       await inputIds.dispose();
       await attention.dispose();
@@ -93,7 +94,7 @@ class NoqlService {
     List<LeitnerCard> cards, {
     int limit = 6,
   }) async {
-    final query = '\${source.front} \${source.back} \${source.extra}';
+    final query = '${source.front} ${source.back} ${source.extra}';
     final matches = await similarCards(query, cards, limit: limit + 1);
     return matches.where((m) => m.card.id != source.id).take(limit).toList();
   }
