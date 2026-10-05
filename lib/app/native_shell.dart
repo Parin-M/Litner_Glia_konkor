@@ -246,7 +246,8 @@ class _AiCardScreenState extends State<AiCardScreen> {
       FilledButton.icon(onPressed:()=>setState(()=>card=SmartEngine.smartQueue(widget.store,widget.data.allCards.where((x)=>x.id!=card.id).toList(),limit:1).first),icon:const Icon(Icons.refresh),label:const Text('کارت دیگر')),
     ]));
   }
-}\nclass NoqlSearch extends StatefulWidget {
+}
+class NoqlSearch extends StatefulWidget {
   const NoqlSearch({super.key, required this.data, required this.store});
   final NativeData data;
   final GliaStore store;
