@@ -1,7 +1,7 @@
 name: glia_leitner
-description: لایتنر هوشمند گلیا کنکور - نسخه بومی Flutter
+description: لایتنر هوشمند گلیا کنکور - Native Flutter
 publish_to: 'none'
-version: 2.0.0+2
+version: 2.1.0+3
 
 environment:
   sdk: '>=3.9.0 <4.0.0'
