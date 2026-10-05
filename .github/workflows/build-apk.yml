@@ -2,10 +2,8 @@ name: Flutter Android Build
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -37,8 +35,15 @@ jobs:
           base64 --decode assets/glia_app_icon.png.b64 > assets/glia_icon.png
           test -s assets/glia_icon.png
 
-      - name: Generate native Flutter data
-        run: dart run tool/generate_native_data.dart
+      - name: Generate native data only for the initial migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f assets/generated_original_deck.json || ! -f assets/generated_persian_pack.json ]]; then
+            test -f reference/leitner_original.html
+            test -f reference/persian_pack.html
+            dart run tool/generate_native_data.dart
+          fi
 
       - name: Configure package id
         shell: bash
@@ -77,7 +82,18 @@ EOF
           s = p.read_text()
           if 'create("release")' not in s:
               marker = '    defaultConfig {'
-              block = '''    signingConfigs {\n        create("release") {\n            val props = java.util.Properties()\n            val keyFile = rootProject.file("key.properties")\n            if (keyFile.exists()) keyFile.inputStream().use { props.load(it) }\n            keyAlias = props.getProperty("keyAlias")\n            keyPassword = props.getProperty("keyPassword")\n            storeFile = props.getProperty("storeFile")?.let { rootProject.file(it) }\n            storePassword = props.getProperty("storePassword")\n        }\n    }\n'''
+              block = '''    signingConfigs {
+          create("release") {
+              val props = java.util.Properties()
+              val keyFile = rootProject.file("key.properties")
+              if (keyFile.exists()) keyFile.inputStream().use { props.load(it) }
+              keyAlias = props.getProperty("keyAlias")
+              keyPassword = props.getProperty("keyPassword")
+              storeFile = props.getProperty("storeFile")?.let { rootProject.file(it) }
+              storePassword = props.getProperty("storePassword")
+          }
+      }
+'''
               s = s.replace(marker, block + marker, 1)
           s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
           p.write_text(s)
@@ -133,6 +149,21 @@ EOF
         run: |
           set -euo pipefail
           gh release create "${GITHUB_REF_NAME}" dist/*.apk dist/SHA256SUMS.txt --generate-notes --title "Glia Konkor ${GITHUB_REF_NAME}"
+
+      - name: Commit the migrated data and remove HTML sources
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f assets/generated_original_deck.json && -f assets/generated_persian_pack.json && -f tool/generate_native_data.dart ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add assets/generated_original_deck.json assets/generated_persian_pack.json
+            git rm -f reference/leitner_original.html reference/persian_pack.html tool/generate_native_data.dart
+            git rm -rf assets/html_b64
+            git commit -m "Migrate embedded learning data to Flutter JSON"
+            git push
+          fi
 
       - name: Cleanup signing material
         if: always()
