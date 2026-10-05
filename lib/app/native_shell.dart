@@ -605,3 +605,264 @@ class _StudyState extends State<Study> {
       HapticFeedback.selectionClick();
     }
   }
+
+
+  @override
+  Widget build(BuildContext context) {
+    if (deck.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.celebration, size: 70, color: gold2),
+              const Text('همه کارت‌ها بررسی شدند 🎉'),
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('بازگشت'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final card = deck[index];
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            '${index + 1} / ${deck.length}',
+            style: const TextStyle(color: dim),
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: (index + 1) / deck.length,
+            color: gold2,
+          ),
+          const SizedBox(height: 15),
+          GestureDetector(
+            onTap: () => setState(() => flip = !flip),
+            child: AnimatedContainer(
+              duration: Duration(
+                milliseconds: widget.store.settings.motion ? 280 : 1,
+              ),
+              constraints: const BoxConstraints(minHeight: 310),
+              padding: const EdgeInsets.all(25),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(26),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF152C45), Color(0xFF0D1727)],
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(card.lesson, style: const TextStyle(color: teal2)),
+                  const Spacer(),
+                  Text(
+                    flip ? card.back : card.front,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: flip ? 23 : 32,
+                      fontWeight: FontWeight.w900,
+                      color: flip ? Colors.white : gold2,
+                      height: 1.7,
+                    ),
+                  ),
+                  if (flip && card.extra.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      card.extra,
+                      style: const TextStyle(color: teal2),
+                    ),
+                  ],
+                  const Spacer(),
+                  const Text(
+                    'لمس کن تا برگردد',
+                    style: TextStyle(color: dim),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _action('دوباره', rose, () => rate(CardResult.review)),
+              const SizedBox(width: 6),
+              _action('بعداً', gold2, () => rate(CardResult.later)),
+              const SizedBox(width: 6),
+              _action(
+                'یاد گرفتم',
+                const Color(0xFF37D6A0),
+                () => rate(CardResult.known),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _action(String title, Color color, VoidCallback onPressed) {
+    return Expanded(
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: color.withValues(alpha: .14),
+          foregroundColor: color,
+        ),
+        child: Text(title),
+      ),
+    );
+  }
+}
+
+class Quiz extends StatefulWidget{const Quiz({super.key,required this.data,required this.store,required this.questions,this.shuffle=true});final NativeData data;final GliaStore store;final List<SpellingQuestion> questions;final bool shuffle;@override State<Quiz> createState()=>_QuizState();}
+class _QuizState extends State<Quiz>{
+  late List<SpellingQuestion> q;
+  int i=0;
+  int? sel;
+  bool sent=false;
+
+  @override
+  void initState(){super.initState();q=List.of(widget.questions);if(widget.shuffle)q.shuffle();}
+
+  Future<void> answer(int n) async {
+    if(sent)return;
+    final ok=n==q[i].correctIndex;
+    setState((){sel=n;sent=true;});
+    await widget.store.answer(q[i],ok);
+    if(widget.store.settings.haptics) HapticFeedback.selectionClick();
+    if(widget.store.settings.sound) SystemSound.play(SystemSoundType.click);
+    if(widget.store.settings.autoNext) {
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if(mounted && sent) next();
+    }
+  }
+
+  void next(){
+    if(i+1>=q.length){Navigator.pop(context);return;}
+    setState((){i++;sel=null;sent=false;});
+  }
+
+  @override
+  Widget build(BuildContext c){
+    final x=q[i];
+    final ok=sent&&sel==x.correctIndex;
+    return Scaffold(
+      appBar:AppBar(title:const Text('املا و آزمون')),
+      body:ListView(
+        padding:const EdgeInsets.all(16),
+        children:[
+          LinearProgressIndicator(value:(i+1)/q.length,color:gold2),
+          const SizedBox(height:14),
+          Text('${i+1} / ${q.length}',style:Theme.of(c).textTheme.bodySmall),
+          const SizedBox(height:8),
+          Card(child:Padding(
+            padding:const EdgeInsets.all(18),
+            child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text(x.lesson,style:const TextStyle(color:teal2,fontWeight:FontWeight.w800)),
+              const SizedBox(height:8),
+              Text(x.sentence,style:const TextStyle(fontSize:21,height:2,fontWeight:FontWeight.w700)),
+            ]),
+          )),
+          const SizedBox(height:10),
+          for(int j=0;j<x.options.length;j++)
+            Padding(
+              padding:const EdgeInsets.only(bottom:8),
+              child:FilledButton(
+                onPressed:sent?null:()=>answer(j),
+                style:FilledButton.styleFrom(
+                  minimumSize:const Size.fromHeight(55),
+                  backgroundColor:!sent?surface:(j==x.correctIndex?teal:(j==sel?rose:surface)),
+                  foregroundColor:Colors.white,
+                ),
+                child:Align(alignment:Alignment.centerRight,child:Text(x.options[j])),
+              ),
+            ),
+          if(sent) Card(
+            color:ok?teal.withValues(alpha:.14):rose.withValues(alpha:.14),
+            child:Padding(
+              padding:const EdgeInsets.all(16),
+              child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Icon(ok?Icons.check_circle:Icons.cancel,color:ok?teal:rose),
+                const SizedBox(width:10),
+                Expanded(child:Text(
+                  ok?'درست گفتی! پاسخ صحیح همین گزینه است.':'اشتباه بود. پاسخ صحیح: ${x.options[x.correctIndex]}',
+                  style:TextStyle(fontWeight:FontWeight.w800,color:ok?teal:rose),
+                )),
+              ]),
+            ),
+          ),
+          if(sent) const SizedBox(height:8),
+          if(sent) FilledButton.icon(
+            onPressed:next,
+            icon:const Icon(Icons.arrow_forward),
+            label:Text(i+1==q.length?'پایان آزمون':'سؤال بعدی'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+class Status extends StatelessWidget{const Status({super.key,required this.data,required this.store,required this.known});final NativeData data;final GliaStore store;final bool known;@override Widget build(BuildContext c){final xs=data.allCards.where((x)=>known?store.cardState[x.id]=='known':store.cardState[x.id]=='review'||store.cardState[x.id]=='later').toList();return Scaffold(appBar:AppBar(title:Text(known?'یادگرفته‌ها':'نیازمند مرور')),body:ListView.builder(itemCount:xs.length,itemBuilder:(_,i)=>ListTile(title:Text(xs[i].front),subtitle:Text(xs[i].back))));}}
+class Settings extends StatefulWidget {
+  const Settings({super.key,required this.data,required this.store});
+  final NativeData data;
+  final GliaStore store;
+  @override State<Settings> createState()=>_SettingsState();
+}
+
+class _SettingsState extends State<Settings> {
+  Future<void> backup() async {
+    final raw=const JsonEncoder.withIndent('  ').convert(widget.store.backup());
+    await SharePlus.instance.share(ShareParams(files:[XFile.fromData(utf8.encode(raw),mimeType:'application/json',name:'glia-backup.json')],text:'پشتیبان گلیا کنکور'));
+  }
+  Future<void> restore() async {
+    final r=await FilePicker.pickFiles(type:FileType.custom,allowedExtensions:['json'],withData:true);
+    if(r==null)return; final bytes=r.files.single.bytes; if(bytes==null)return;
+    await widget.store.restore(Map<String,dynamic>.from(jsonDecode(utf8.decode(bytes))));
+  }
+  Future<void> reset() async => widget.store.resetProgress();
+  Future<void> setS(GliaSettings s) async => widget.store.updateSettings(s);
+  @override Widget build(BuildContext c) {
+    final s=widget.store.settings;
+    return ListView(padding:const EdgeInsets.all(16),children:[
+      const Text('تنظیمات حرفه‌ای',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),
+      const SizedBox(height:8),
+      const Text('ظاهر، سرعت، تعامل و پشتیبان‌گیری؛ کاملاً آفلاین.',style:TextStyle(color:dim)),
+      Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        const Text('رنگ برنامه',style:TextStyle(fontWeight:FontWeight.w800)),
+        const SizedBox(height:10),
+        Wrap(spacing:8,runSpacing:8,children:[
+          _theme('amber','طلایی',gold2,s.theme), _theme('cyan','فیروزه‌ای',teal2,s.theme),
+          _theme('purple','بنفش',const Color(0xFFB58CFF),s.theme), _theme('emerald','سبز',const Color(0xFF37D6A0),s.theme),
+          _theme('rose','رز',const Color(0xFFFF7B6B),s.theme), _theme('blue','آبی',const Color(0xFF6EA8FF),s.theme),
+        ]),
+      ]))),
+      _sw('انیمیشن‌ها',s.motion,(v)=>setS(s.copyWith(motion:v)),Icons.animation),
+      _sw('بازخورد لمسی',s.haptics,(v)=>setS(s.copyWith(haptics:v)),Icons.vibration),
+      _sw('صدای تعامل',s.sound,(v)=>setS(s.copyWith(sound:v)),Icons.volume_up),
+      _sw('رفتن خودکار به سؤال بعدی',s.autoNext,(v)=>setS(s.copyWith(autoNext:v)),Icons.skip_next),
+      _sw('Shuffle هوشمند',s.shuffle,(v)=>setS(s.copyWith(shuffle:v)),Icons.shuffle),
+      _sw('حالت کم‌مصرف',s.lowPower,(v)=>setS(s.copyWith(lowPower:v)),Icons.battery_saver),
+      _sl('مکث کارت',s.delay.toDouble(),1000,8000,14,(v)=>setS(s.copyWith(delay:v.round()))),
+      _sl('اندازه متن',s.fontScale,.8,1.5,14,(v)=>setS(s.copyWith(fontScale:v))),
+      _sl('هدف روزانه',s.dailyGoal.toDouble(),10,100,18,(v)=>setS(s.copyWith(dailyGoal:v.round()))),
+      Card(child:Column(children:[
+        ListTile(leading:const Icon(Icons.ios_share,color:teal),title:const Text('پشتیبان‌گیری'),onTap:backup),
+        ListTile(leading:const Icon(Icons.restore,color:gold2),title:const Text('بازیابی'),onTap:restore),
+        ListTile(leading:const Icon(Icons.delete_sweep,color:rose),title:const Text('ریست کامل'),onTap:reset),
+      ])),
+      const Card(child:ListTile(title:Text('Native / Offline'),subtitle:Text('۲۱۵۱ کارت · ۶۳۹ سؤال · ۴۳۴ کارت پک فارسی'))),
+    ]);
+  }
+  Widget _sw(String t,bool v,ValueChanged<bool> f,IconData i)=>Card(child:SwitchListTile(value:v,onChanged:f,secondary:Icon(i),title:Text(t)));
+  Widget _theme(String id,String label,Color color,String selected)=>InkWell(onTap:()=>setS(widget.store.settings.copyWith(theme:id)),borderRadius:BorderRadius.circular(14),child:Container(width:92,padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:color.withValues(alpha:.12),borderRadius:BorderRadius.circular(14),border:Border.all(color:selected==id?color:Colors.transparent,width:2)),child:Column(children:[CircleAvatar(radius:14,backgroundColor:color),const SizedBox(height:6),Text(label,style:TextStyle(color:color,fontWeight:FontWeight.w800))])));
+  Widget _sl(String t,double v,double a,double b,int d,ValueChanged<double> f)=>Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[Row(children:[Expanded(child:Text(t)),Text(t=='هدف روزانه'?'${v.round()}':'${(v*100).round()}٪',style:const TextStyle(color:teal2,fontWeight:FontWeight.w800))]),Slider(value:v.clamp(a,b),min:a,max:b,divisions:d,onChanged:f)])));
+}
