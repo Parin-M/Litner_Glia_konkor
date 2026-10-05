@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   analyze:
@@ -57,7 +57,18 @@ jobs:
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
       - name: Build Android APKs
-        run: flutter build apk --release --split-per-abi
+        run: |
+          flutter build apk --release
+          flutter build apk --release --split-per-abi
+      - name: Publish latest APK to repository
+        shell: bash
+        run: |
+          mkdir -p releases
+          cp build/app/outputs/flutter-apk/app-release.apk releases/glia-konkor-latest.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add releases/glia-konkor-latest.apk
+          git diff --cached --quiet || (git commit -m "ci: publish latest APK [skip ci]" && git push)
       - uses: actions/upload-artifact@v4
         with:
           name: glia-android-apks
