@@ -35,7 +35,7 @@ jobs:
             sed -i '/android {/a\    compileSdk = 36' android/app/build.gradle.kts
             sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 36/' android/app/build.gradle.kts
             sed -i '/android {/a\    packaging { jniLibs { useLegacyPackaging = false } }' android/app/build.gradle.kts
-            sed -i '/buildTypes {/a\        release { minifyEnabled = true }' android/app/build.gradle.kts
+            sed -i '/buildTypes {/a\        release { isMinifyEnabled = true }' android/app/build.gradle.kts
           elif [ -f android/app/build.gradle ]; then
             sed -i '/android {/a\    ndkVersion "28.0.13004108"' android/app/build.gradle
             sed -i '/android {/a\    compileSdk 36' android/app/build.gradle
