@@ -22,6 +22,8 @@ class LeitnerWebViewService {
   late final WebViewController controller;
   bool _initialized = false;
 
+  bool get isInitialized => _initialized;
+
   Future<void> initialize() async {
     if (_initialized) return;
 
@@ -78,6 +80,11 @@ class LeitnerWebViewService {
       );
 
     _initialized = true;
+    state.value = const WebViewShellState(
+      status: WebViewShellStatus.loading,
+      progress: 0,
+    );
+
     await controller.loadFlutterAsset(AppConstants.htmlAsset);
   }
 
@@ -96,8 +103,10 @@ class LeitnerWebViewService {
 
   Future<bool> goBackIfPossible() async {
     if (!_initialized) return false;
+
     final canGoBack = await controller.canGoBack();
     if (!canGoBack) return false;
+
     await controller.goBack();
     return true;
   }
@@ -109,13 +118,6 @@ class LeitnerWebViewService {
   NavigationDecision _onNavigationRequest(NavigationRequest request) {
     final uri = Uri.tryParse(request.url);
     if (uri == null) return NavigationDecision.prevent;
-
-    if (uri.scheme == 'https' && uri.host == AppConstants.allowedExternalHost) {
-      if (uri.path.startsWith('/Glia_konkor')) {
-        _openExternal(uri);
-        return NavigationDecision.prevent;
-      }
-    }
 
     if (uri.scheme == 'file' || uri.scheme == 'about') {
       return NavigationDecision.navigate;
