@@ -24,6 +24,9 @@ jobs:
       - name: Create Android platform
         run: flutter create --platforms=android --org com.glia.konkor --project-name glia_leitner .
 
+      - name: Remove Flutter template test
+        run: rm -f test/widget_test.dart
+
       - name: Restore app icon
         run: |
           mkdir -p assets
