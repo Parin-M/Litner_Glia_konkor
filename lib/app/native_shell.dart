@@ -119,9 +119,9 @@ class _NoqlSearchState extends State<NoqlSearch> {
         const SizedBox(height: 10),
         if (!ready) const Card(child: ListTile(leading: Icon(Icons.info_outline, color: gold2), title: Text('در حال آماده‌سازی AI'), subtitle: Text('مدل و نمایه به‌صورت آفلاین داخل APK قرار می‌گیرند.'))),
         for (final item in results) Card(child: ListTile(
-          leading: CircleAvatar(backgroundColor: teal.withValues(alpha: .14), child: Text('\${(item.score * 100).round()}%', style: const TextStyle(color: teal2, fontSize: 11))),
+          leading: CircleAvatar(backgroundColor: teal.withValues(alpha: .14), child: Text('${(item.score * 100).round()}%', style: const TextStyle(color: teal2, fontSize: 11))),
           title: Text(item.card.front, style: const TextStyle(fontWeight: FontWeight.w900)),
-          subtitle: Text('\${item.card.back}\n\${item.card.lesson}', maxLines: 2, overflow: TextOverflow.ellipsis),
+          subtitle: Text('${item.card.back}\n${item.card.lesson}', maxLines: 2, overflow: TextOverflow.ellipsis),
           isThreeLine: true,
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Study(title: 'تمرین مشابه', cards: [item.card], store: widget.store, dueOnly: false))),
         )),
