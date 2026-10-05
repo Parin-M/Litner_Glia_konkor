@@ -57,12 +57,15 @@ class _LeitnerPageState extends State<LeitnerPage> {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (shellState.status != WebViewShellStatus.error)
+                  if (_service.isInitialized &&
+                      shellState.status != WebViewShellStatus.error)
                     WebViewWidget(controller: _service.controller),
                   if (shellState.status == WebViewShellStatus.error)
                     _ErrorView(
                       message: shellState.errorMessage,
-                      onRetry: _service.reload,
+                      onRetry: () {
+                        _initialize();
+                      },
                     ),
                   if (shellState.status == WebViewShellStatus.loading)
                     IgnorePointer(
