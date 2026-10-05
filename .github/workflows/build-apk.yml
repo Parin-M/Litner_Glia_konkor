@@ -1,18 +1,20 @@
-name: Android APK
+name: Flutter Android Build
 
 on:
   push:
-    branches: [main]
-    tags: ['v*']
+    branches:
+      - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  android:
+    name: Build Android APKs
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,41 +26,43 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create Android runner
+      - name: Generate Android project
         run: flutter create --platforms=android --org com.glia.konkor --project-name glia_leitner .
 
-      - name: Restore logo asset
+      - name: Restore app icon
+        shell: bash
         run: |
-          base64 -d assets/glia_app_icon.png.b64 > assets/glia_icon.png
-          file assets/glia_icon.png
+          set -euo pipefail
+          mkdir -p assets
+          base64 --decode assets/glia_app_icon.png.b64 > assets/glia_icon.png
+          test -s assets/glia_icon.png
 
-      - name: Generate native data
+      - name: Generate native Flutter data
         run: dart run tool/generate_native_data.dart
 
-      - name: Detect release signing configuration
-        id: signing
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Configure package id
+        shell: bash
         run: |
-          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "Release signing secrets are available."
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Release signing secrets are not configured; CI will create a validation build using Flutter's default release signing."
-          fi
+          set -euo pipefail
+          sed -i 's/applicationId = "[^"]*"/applicationId = "com.glia.konkor"/' android/app/build.gradle.kts
+          sed -i 's/namespace = "[^"]*"/namespace = "com.glia.konkor"/' android/app/build.gradle.kts
 
-      - name: Restore release keystore
-        if: steps.signing.outputs.available == 'true'
+      - name: Configure release signing
+        id: signing
+        shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
+          set -euo pipefail
+          if [[ -z "$ANDROID_KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo 'Release keystore secrets are not configured; building validation APKs only.'
+            exit 0
+          fi
+          echo 'available=true' >> "$GITHUB_OUTPUT"
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/glia-release.jks
           cat > android/key.properties <<EOF
 storePassword=$ANDROID_KEYSTORE_PASSWORD
@@ -67,66 +71,69 @@ keyAlias=$ANDROID_KEY_ALIAS
 storeFile=glia-release.jks
 EOF
           chmod 600 android/glia-release.jks android/key.properties
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android/app/build.gradle.kts')
+          s = p.read_text()
+          if 'create("release")' not in s:
+              marker = '    defaultConfig {'
+              block = '''    signingConfigs {\n        create("release") {\n            val props = java.util.Properties()\n            val keyFile = rootProject.file("key.properties")\n            if (keyFile.exists()) keyFile.inputStream().use { props.load(it) }\n            keyAlias = props.getProperty("keyAlias")\n            keyPassword = props.getProperty("keyPassword")\n            storeFile = props.getProperty("storeFile")?.let { rootProject.file(it) }\n            storePassword = props.getProperty("storePassword")\n        }\n    }\n'''
+              s = s.replace(marker, block + marker, 1)
+          s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+          p.write_text(s)
+          PY
 
-      - name: Apply Android hardening and optional release signing
-        run: python3 tool/prepare_android.py
-
-      - name: Restore pub dependencies
+      - name: Dependencies
         run: flutter pub get
 
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
-      - name: Remove generated sample test
-        run: rm -f test/widget_test.dart
-
-      - name: Analyze
+      - name: Analyze Dart/Flutter code
         run: flutter analyze
 
-      - name: Run tests
+      - name: Test Dart/Flutter code
         run: flutter test
 
-      - name: Build split APKs
+      - name: Build APKs
         run: flutter build apk --release --split-per-abi
 
-      - name: Verify APK signatures
+      - name: Verify signed APKs
         if: steps.signing.outputs.available == 'true'
+        shell: bash
         run: |
+          set -euo pipefail
           for apk in build/app/outputs/flutter-apk/*-release.apk; do
-            echo "=== $apk ==="
-            apksigner verify --verbose "$apk" | tail -n 12
+            apksigner verify --verbose "$apk"
           done
 
-      - name: Prepare release assets
+      - name: Collect APKs
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/glia-konkor-armeabi-v7a.apk
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/glia-konkor-arm64-v8a.apk
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk dist/glia-konkor-x86_64.apk
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
-      - name: Upload workflow artifact
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
           name: glia-konkor-apks
           path: dist/*
+          if-no-files-found: error
           retention-days: 30
 
-      - name: Publish/update GitHub Release
-        if: steps.signing.outputs.available == 'true' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+      - name: Publish GitHub Release
+        if: steps.signing.outputs.available == 'true' && startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          VERSION=$(awk -F: '/^version:/ {gsub(/ /,"",$2); print $2}' pubspec.yaml | cut -d+ -f1)
-          TAG="v$VERSION"
-          TITLE="گلیا کنکور $TAG"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/*.apk dist/SHA256SUMS.txt --clobber
-          else
-            gh release create "$TAG" dist/*.apk dist/SHA256SUMS.txt --generate-notes --title "$TITLE"
-          fi
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" dist/*.apk dist/SHA256SUMS.txt --generate-notes --title "Glia Konkor ${GITHUB_REF_NAME}"
 
       - name: Cleanup signing material
         if: always()
-        run: |
-          rm -f android/glia-release.jks android/key.properties
+        run: rm -f android/glia-release.jks android/key.properties
