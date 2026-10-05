@@ -21,6 +21,8 @@ jobs:
           cache: true
       - name: Create all Flutter platforms
         run: flutter create --platforms=android,ios,web,windows,macos,linux --org com.glia.konkor --project-name glia_leitner .
+      - name: Remove Flutter template test
+        run: rm -f test/widget_test.dart
       - name: Restore icon
         run: |
           mkdir -p assets
