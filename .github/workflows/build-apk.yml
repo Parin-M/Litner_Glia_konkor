@@ -32,7 +32,35 @@ jobs:
       - name: Create Android runner
         run: flutter create --platforms=android --org com.glia.konkor --project-name glia_leitner .
 
-      - name: Apply Android hardening
+      - name: Require release signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "Missing ANDROID_KEYSTORE_BASE64" && exit 1)
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || (echo "Missing ANDROID_KEYSTORE_PASSWORD" && exit 1)
+          test -n "$ANDROID_KEY_ALIAS" || (echo "Missing ANDROID_KEY_ALIAS" && exit 1)
+          test -n "$ANDROID_KEY_PASSWORD" || (echo "Missing ANDROID_KEY_PASSWORD" && exit 1)
+
+      - name: Restore release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/glia-release.jks
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=glia-release.jks
+          EOF
+          chmod 600 android/glia-release.jks android/key.properties
+
+      - name: Apply Android hardening and release signing
         run: python3 tool/patch_android.py
 
       - name: Restore pub dependencies
@@ -47,8 +75,18 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      - name: Run tests
+        run: flutter test
+
       - name: Build split APKs
         run: flutter build apk --release --split-per-abi
+
+      - name: Verify APK signatures
+        run: |
+          for apk in build/app/outputs/flutter-apk/*-release.apk; do
+            echo "=== $apk ==="
+            apksigner verify --verbose "$apk" | tail -n 12
+          done
 
       - name: Prepare release assets
         run: |
@@ -56,16 +94,30 @@ jobs:
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/glia-konkor-armeabi-v7a.apk
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/glia-konkor-arm64-v8a.apk
           cp build/app/outputs/flutter-apk/app-x86_64-release.apk dist/glia-konkor-x86_64.apk
+          sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: glia-konkor-apks
-          path: dist/*.apk
+          path: dist/*
           retention-days: 30
 
-      - name: Create GitHub Release on version tag
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish/update GitHub Release
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" dist/*.apk --generate-notes --title "گلیا کنکور ${GITHUB_REF_NAME}"
+        run: |
+          VERSION=$(awk -F: '/^version:/ {gsub(/ /,"",$2); print $2}' pubspec.yaml | cut -d+ -f1)
+          TAG="v$VERSION"
+          TITLE="گلیا کنکور $TAG"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.apk dist/SHA256SUMS.txt --clobber
+          else
+            gh release create "$TAG" dist/*.apk dist/SHA256SUMS.txt               --generate-notes               --title "$TITLE"
+          fi
+
+      - name: Cleanup signing material
+        if: always()
+        run: |
+          rm -f android/glia-release.jks android/key.properties
