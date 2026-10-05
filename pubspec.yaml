@@ -29,6 +29,7 @@ flutter:
     - assets/generated_original_deck.json
     - assets/generated_persian_pack.json
     - assets/glia_icon.png
+    - assets/ai/
 
 flutter_launcher_icons:
   android: true
