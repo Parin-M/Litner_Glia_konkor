@@ -32,19 +32,24 @@ jobs:
       - name: Create Android runner
         run: flutter create --platforms=android --org com.glia.konkor --project-name glia_leitner .
 
-      - name: Require release signing secrets
+      - name: Detect release signing configuration
+        id: signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "Missing ANDROID_KEYSTORE_BASE64" && exit 1)
-          test -n "$ANDROID_KEYSTORE_PASSWORD" || (echo "Missing ANDROID_KEYSTORE_PASSWORD" && exit 1)
-          test -n "$ANDROID_KEY_ALIAS" || (echo "Missing ANDROID_KEY_ALIAS" && exit 1)
-          test -n "$ANDROID_KEY_PASSWORD" || (echo "Missing ANDROID_KEY_PASSWORD" && exit 1)
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Release signing secrets are available."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Release signing secrets are not configured; CI will create a validation build using Flutter's default release signing."
+          fi
 
       - name: Restore release keystore
+        if: steps.signing.outputs.available == 'true'
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -60,7 +65,7 @@ jobs:
           EOF
           chmod 600 android/glia-release.jks android/key.properties
 
-      - name: Apply Android hardening and release signing
+      - name: Apply Android hardening and optional release signing
         run: python3 tool/patch_android.py
 
       - name: Restore pub dependencies
@@ -82,6 +87,7 @@ jobs:
         run: flutter build apk --release --split-per-abi
 
       - name: Verify APK signatures
+        if: steps.signing.outputs.available == 'true'
         run: |
           for apk in build/app/outputs/flutter-apk/*-release.apk; do
             echo "=== $apk ==="
@@ -104,7 +110,7 @@ jobs:
           retention-days: 30
 
       - name: Publish/update GitHub Release
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+        if: steps.signing.outputs.available == 'true' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
