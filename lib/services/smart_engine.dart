@@ -109,7 +109,6 @@ class SmartEngine {
     int limit = 20,
   }) {
     final ranked = rank(store, cards);
-    ranked.sort((a, b) => a.card.id.compareTo(b.card.id));
     return ranked.take(limit).map((x) => x.card).toList();
   }
 }
