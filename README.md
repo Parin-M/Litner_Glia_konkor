@@ -1,5 +1,5 @@
 # گلیا کنکور — Native Flutter
-
+سایت برنامه : https://parin-m.github.io/Litner_Glia_konkor_Site/
 نسخه فعلی کاملاً Native Flutter است و دیگر HTML/WebView را در زمان اجرای APK استفاده نمی‌کند. فایل‌های HTML داخل `reference/` فقط منبع داده و مرجع تبدیل هستند.
 
 ## داده‌های حفظ‌شده
