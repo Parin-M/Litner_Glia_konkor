@@ -133,10 +133,10 @@ class SmartEngine {
     final accuracy = store.reviewed == 0 ? 0 : ((store.correct / store.reviewed) * 100).round();
     final critical = criticalCards(store, cards).length;
     if (store.reviewed == 0) return 'هنوز داده کافی نداریم؛ یک مرور کوتاه شروع کن تا مربی هوشمند الگوی یادگیری‌ات را پیدا کند.';
-    if (critical > 0) return '${critical} کارت بحرانی داری. اول آن‌ها را مرور کن؛ بعد سراغ کارت‌های موعددار برو.';
-    if (weak.isNotEmpty) return 'تمرکز بعدی روی «${weak.keys.first}» است. ${due} کارت موعددار داری و دقت فعلی‌ات ${accuracy}٪ است.';
-    if (accuracy < 70) return 'امروز مرورهای کوتاه و تکراری داشته باش؛ دقت فعلی ${accuracy}٪ است.';
-    return 'عملکردت خوب است؛ ${due} کارت موعددار را جمع کن و سپس یک چالش کوتاه انجام بده.';
+    if (critical > 0) return '$critical کارت بحرانی داری. اول آن‌ها را مرور کن؛ بعد سراغ کارت‌های موعددار برو.';
+    if (weak.isNotEmpty) return 'تمرکز بعدی روی «${weak.keys.first}» است. $due کارت موعددار داری و دقت فعلی‌ات $accuracy٪ است.';
+    if (accuracy < 70) return 'امروز مرورهای کوتاه و تکراری داشته باش؛ دقت فعلی $accuracy٪ است.';
+    return 'عملکردت خوب است؛ $due کارت موعددار را جمع کن و سپس یک چالش کوتاه انجام بده.';
   }
 
   static List<LeitnerCard> challenge(GliaStore store, List<LeitnerCard> cards, {int limit = 20}) =>
@@ -167,6 +167,6 @@ class SmartEngine {
     final missed = cards.where((c) => !store.isKnown(c.id)).length;
     if (missed == 0) return 'عالیه؛ عقب‌افتادگی نداری.';
     final n = math.min(10, missed);
-    return 'برای برگشت بعد از وقفه، امروز فقط ${n} کارت اولویت‌دار را مرور کن؛ جلسه را کوتاه نگه دار و فشار را تدریجی بالا ببر.';
+    return 'برای برگشت بعد از وقفه، امروز فقط $n کارت اولویت‌دار را مرور کن؛ جلسه را کوتاه نگه دار و فشار را تدریجی بالا ببر.';
   }
 }
