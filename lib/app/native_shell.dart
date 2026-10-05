@@ -10,7 +10,6 @@ import '../services/native_store.dart';
 const bg=Color(0xFF0B0F1A),surface=Color(0xFF171E2E),surface2=Color(0xFF1D2740),gold=Color(0xFFE8A94C),gold2=Color(0xFFF4C777),teal=Color(0xFF4FBDBA),teal2=Color(0xFF78D9D6),rose=Color(0xFFE8674F),dim=Color(0xFF8B93A7);
 class NativeShell extends StatefulWidget{const NativeShell({super.key});@override State<NativeShell> createState()=>_NativeShellState();}
 class _NativeShellState extends State<NativeShell>{NativeData?data;GliaStore?store;Object?error;@override void initState(){super.initState();load();}Future<void>load()async{try{final d=NativeData.fromJson(await rootBundle.loadString('assets/generated_original_deck.json'),await rootBundle.loadString('assets/generated_persian_pack.json'));final s=GliaStore(d);await s.init();if(mounted)setState((){data=d;store=s;});}catch(e){if(mounted)setState(()=>error=e);}}@override Widget build(BuildContext c){if(error!=null)return MaterialApp(home:Scaffold(body:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.error_outline,size:60,color:rose),Text('$error'),FilledButton(onPressed:load,child:const Text('تلاش دوباره'))]))));if(data==null||store==null)return const MaterialApp(home:Scaffold(body:Center(child:CircularProgressIndicator())));return AnimatedBuilder(animation:store!,builder:(context,child){
-  const dark=true;
   final themeSeed=switch(store!.settings.theme){
     'cyan'=>teal2,
     'purple'=>const Color(0xFFB58CFF),
@@ -100,7 +99,7 @@ class _LessonPickerState extends State<LessonPicker> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => Study(title: selectedLesson, cards: xs, store: widget.store),
+        builder: (_) => Study(title: selectedLesson, cards: xs, store: widget.store, dueOnly: dueOnly),
       ),
     );
   }
@@ -290,10 +289,11 @@ class _QuizPickerState extends State<QuizPicker> {
 }
 
 class Study extends StatefulWidget {
-  const Study({super.key, required this.title, required this.cards, required this.store});
+  const Study({super.key, required this.title, required this.cards, required this.store, this.dueOnly = true});
   final String title;
   final List<LeitnerCard> cards;
   final GliaStore store;
+  final bool dueOnly;
 
   @override
   State<Study> createState() => _StudyState();
@@ -307,8 +307,8 @@ class _StudyState extends State<Study> {
   @override
   void initState() {
     super.initState();
-    deck = List.of(widget.cards)
-      ..removeWhere((x) => !widget.store.isDue(x.id));
+    deck = List.of(widget.cards);
+    if (widget.dueOnly) deck.removeWhere((x) => !widget.store.isDue(x.id));
     if (widget.store.settings.shuffle) deck.shuffle();
   }
 
