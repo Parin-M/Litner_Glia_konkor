@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -190,8 +191,8 @@ class KnowledgeChainScreen extends StatelessWidget {
   const KnowledgeChainScreen({super.key, required this.data, required this.store});
   final NativeData data; final GliaStore store;
   @override Widget build(BuildContext c) {
-    final card = SmartEngine.smartQueue(store, data.allCards, limit: 1).firstOrNull;
-    final chain = card == null ? <LeitnerCard>[] : SmartEngine.knowledgeChain(store, data.allCards, card);
+    final top = SmartEngine.smartQueue(store, data.allCards, limit: 1);
+    final chain = top.isEmpty ? <LeitnerCard>[] : SmartEngine.knowledgeChain(store, data.allCards, top.first);
     return Scaffold(appBar: AppBar(title: const Text('زنجیره دانشی')), body: ListView(padding: const EdgeInsets.all(16), children: [
       for (var i=0;i<chain.length;i++) Card(child: ListTile(leading: CircleAvatar(child: Text('${i+1}')), title: Text(chain[i].front), subtitle: Text(chain[i].back))),
     ]));
