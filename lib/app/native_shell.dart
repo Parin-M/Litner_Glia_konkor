@@ -10,34 +10,42 @@ import '../services/native_store.dart';
 const bg=Color(0xFF0B0F1A),surface=Color(0xFF171E2E),surface2=Color(0xFF1D2740),gold=Color(0xFFE8A94C),gold2=Color(0xFFF4C777),teal=Color(0xFF4FBDBA),teal2=Color(0xFF78D9D6),rose=Color(0xFFE8674F),dim=Color(0xFF8B93A7);
 class NativeShell extends StatefulWidget{const NativeShell({super.key});@override State<NativeShell> createState()=>_NativeShellState();}
 class _NativeShellState extends State<NativeShell>{NativeData?data;GliaStore?store;Object?error;@override void initState(){super.initState();load();}Future<void>load()async{try{final d=NativeData.fromJson(await rootBundle.loadString('assets/generated_original_deck.json'),await rootBundle.loadString('assets/generated_persian_pack.json'));final s=GliaStore(d);await s.init();if(mounted)setState((){data=d;store=s;});}catch(e){if(mounted)setState(()=>error=e);}}@override Widget build(BuildContext c){if(error!=null)return MaterialApp(home:Scaffold(body:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.error_outline,size:60,color:rose),Text('$error'),FilledButton(onPressed:load,child:const Text('تلاش دوباره'))]))));if(data==null||store==null)return const MaterialApp(home:Scaffold(body:Center(child:CircularProgressIndicator())));return AnimatedBuilder(animation:store!,builder:(context,child){
-  final dark=store!.settings.dark;
-  final cs=ColorScheme.fromSeed(seedColor:dark?gold:const Color(0xFF8A5A12),brightness:dark?Brightness.dark:Brightness.light).copyWith(
-    primary:dark?gold2:const Color(0xFF8A5A12),
-    onPrimary:dark?const Color(0xFF1A1207):Colors.white,
-    secondary:dark?teal2:const Color(0xFF176B69),
-    onSecondary:dark?const Color(0xFF061515):Colors.white,
-    surface:dark?surface:const Color(0xFFFFFCF5),
-    onSurface:dark?Colors.white:const Color(0xFF1C1B18),
-    surfaceContainerHighest:dark?surface2:const Color(0xFFEAE4D8),
-    onSurfaceVariant:dark?const Color(0xFFD2D6E0):const Color(0xFF4B4A45),
-    outline:dark?const Color(0xFF596276):const Color(0xFF77736A),
+  const dark=true;
+  final themeSeed=switch(store!.settings.theme){
+    'cyan'=>teal2,
+    'purple'=>const Color(0xFFB58CFF),
+    'emerald'=>const Color(0xFF37D6A0),
+    'rose'=>const Color(0xFFFF7B6B),
+    'blue'=>const Color(0xFF6EA8FF),
+    _=>gold,
+  };
+  final cs=ColorScheme.fromSeed(seedColor:themeSeed,brightness:Brightness.dark).copyWith(
+    primary:themeSeed,
+    onPrimary:const Color(0xFF08101A),
+    secondary:themeSeed,
+    onSecondary:const Color(0xFF08101A),
+    surface:surface,
+    onSurface:Colors.white,
+    surfaceContainerHighest:surface2,
+    onSurfaceVariant:const Color(0xFFD2D6E0),
+    outline:const Color(0xFF596276),
   );
-  final text=dark?Colors.white:const Color(0xFF202124);
-  final muted=dark?const Color(0xFFB8C0D0):const Color(0xFF5F5C55);
+  final text=Colors.white;
+  final muted=const Color(0xFFB8C0D0);
   return MaterialApp(
     debugShowCheckedModeBanner:false,title:'گلیا کنکور',
     theme:ThemeData(
       useMaterial3:true,brightness:dark?Brightness.dark:Brightness.light,
       scaffoldBackgroundColor:dark?bg:const Color(0xFFF6F2E8),colorScheme:cs,
-      cardTheme:CardThemeData(color:dark?surface:Colors.white,surfaceTintColor:Colors.transparent,margin:const EdgeInsets.symmetric(vertical:4)),
-      appBarTheme:AppBarTheme(backgroundColor:dark?bg:const Color(0xFFF6F2E8),foregroundColor:text,surfaceTintColor:Colors.transparent),
-      drawerTheme:DrawerThemeData(backgroundColor:dark?surface:Colors.white),
-      navigationBarTheme:NavigationBarThemeData(backgroundColor:dark?surface:Colors.white,indicatorColor:dark?surface2:const Color(0xFFE8D5AE),labelTextStyle:WidgetStatePropertyAll(TextStyle(color:dark?Colors.white:const Color(0xFF302F2B),fontWeight:FontWeight.w700))),
-      listTileTheme:ListTileThemeData(textColor:text,subtitleTextStyle:TextStyle(color:muted),iconColor:dark?teal2:const Color(0xFF176B69)),
+      cardTheme:CardThemeData(color:surface,surfaceTintColor:Colors.transparent,margin:const EdgeInsets.symmetric(vertical:4)),
+      appBarTheme:AppBarTheme(backgroundColor:bg,foregroundColor:text,surfaceTintColor:Colors.transparent),
+      drawerTheme:DrawerThemeData(backgroundColor:surface),
+      navigationBarTheme:NavigationBarThemeData(backgroundColor:surface,indicatorColor:surface2,labelTextStyle:WidgetStatePropertyAll(TextStyle(color:Colors.white,fontWeight:FontWeight.w700))),
+      listTileTheme:ListTileThemeData(textColor:text,subtitleTextStyle:TextStyle(color:muted),iconColor:teal2),
       inputDecorationTheme:InputDecorationTheme(labelStyle:TextStyle(color:muted),hintStyle:TextStyle(color:muted)),
-      textTheme:ThemeData(brightness:dark?Brightness.dark:Brightness.light).textTheme.apply(bodyColor:text,displayColor:text),
+      textTheme:ThemeData(brightness:Brightness.dark).textTheme.apply(bodyColor:text,displayColor:text),
     ),
-    home:Directionality(textDirection:TextDirection.rtl,child:Home(data:data!,store:store!)),
+    home:MediaQuery(data:MediaQuery.of(context).copyWith(textScaler:TextScaler.linear(store!.settings.fontScale.clamp(.8,1.5))),child:Directionality(textDirection:TextDirection.rtl,child:Home(data:data!,store:store!))),
   );
 });}}
 class Logo extends StatelessWidget{const Logo({super.key,this.size=52});final double size;@override Widget build(BuildContext c)=>ClipRRect(borderRadius:BorderRadius.circular(size*.2),child:Image.asset('assets/glia_icon.png',width:size,height:size,fit:BoxFit.cover,errorBuilder:(context,error,stackTrace)=>Container(width:size,height:size,color:gold,child:const Icon(Icons.psychology,color:Colors.white))));}
@@ -517,4 +525,4 @@ class _QuizState extends State<Quiz>{
 }
 class Status extends StatelessWidget{const Status({super.key,required this.data,required this.store,required this.known});final NativeData data;final GliaStore store;final bool known;@override Widget build(BuildContext c){final xs=data.allCards.where((x)=>known?store.cardState[x.id]=='known':store.cardState[x.id]=='review'||store.cardState[x.id]=='later').toList();return Scaffold(appBar:AppBar(title:Text(known?'یادگرفته‌ها':'نیازمند مرور')),body:ListView.builder(itemCount:xs.length,itemBuilder:(_,i)=>ListTile(title:Text(xs[i].front),subtitle:Text(xs[i].back))));}}
 class Settings extends StatefulWidget{const Settings({super.key,required this.data,required this.store});final NativeData data;final GliaStore store;@override State<Settings> createState()=>_SettingsState();}
-class _SettingsState extends State<Settings>{Future<void>backup()async{final raw=const JsonEncoder.withIndent('  ').convert(widget.store.backup());await SharePlus.instance.share(ShareParams(files:[XFile.fromData(utf8.encode(raw),mimeType:'application/json',name:'glia-backup.json')],text:'پشتیبان گلیا کنکور'));}Future<void>restore()async{final r=await FilePicker.pickFiles(type:FileType.custom,allowedExtensions:['json'],withData:true);if(r==null)return;final bytes=r.files.single.bytes;if(bytes==null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('خواندن فایل پشتیبان در این پلتفرم ممکن نیست.')));return;}final raw=utf8.decode(bytes);await widget.store.restore(Map<String,dynamic>.from(jsonDecode(raw)));}Future<void>reset()async{await widget.store.resetProgress();}Future<void>setS(GliaSettings s)=>widget.store.updateSettings(s);@override Widget build(BuildContext c){final s=widget.store.settings;return ListView(padding:const EdgeInsets.all(16),children:[const Text('تنظیمات حرفه‌ای',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),const SizedBox(height:8),const Text('ظاهر، سرعت، تعامل و پشتیبان‌گیری؛ کاملاً آفلاین.',style:TextStyle(color:dim)),_sw('حالت تاریک',s.dark,(v)=>setS(s.copyWith(dark:v)),Icons.dark_mode),_sw('انیمیشن‌ها',s.motion,(v)=>setS(s.copyWith(motion:v)),Icons.animation),_sw('بازخورد لمسی',s.haptics,(v)=>setS(s.copyWith(haptics:v)),Icons.vibration),_sw('Shuffle',s.shuffle,(v)=>setS(s.copyWith(shuffle:v)),Icons.shuffle),_sw('حالت کم‌مصرف',s.lowPower,(v)=>setS(s.copyWith(lowPower:v)),Icons.battery_saver),_sl('مکث کارت',s.delay.toDouble(),1000,8000,14,(v)=>setS(s.copyWith(delay:v.round()))),_sl('اندازه متن',s.fontScale,.9,1.2,6,(v)=>setS(s.copyWith(fontScale:v))),_sl('هدف روزانه',s.dailyGoal.toDouble(),10,100,18,(v)=>setS(s.copyWith(dailyGoal:v.round()))),Card(child:Column(children:[ListTile(leading:const Icon(Icons.ios_share,color:teal),title:const Text('پشتیبان‌گیری'),onTap:backup),ListTile(leading:const Icon(Icons.restore,color:gold2),title:const Text('بازیابی'),onTap:restore),ListTile(leading:const Icon(Icons.delete_sweep,color:rose),title:const Text('ریست کامل'),onTap:reset)])),const Card(child:ListTile(title:Text('Native / Offline'),subtitle:Text('۲۱۵۱ کارت · ۶۳۹ سؤال · ۴۳۴ کارت پک فارسی'))),const Card(child:ListTile(title:Text('ABI انتشار'),subtitle:Text('armeabi-v7a · arm64-v8a · x86_64')))]);}Widget _sw(String t,bool v,ValueChanged<bool>f,IconData i)=>Card(child:SwitchListTile(value:v,onChanged:f,secondary:Icon(i),title:Text(t)));Widget _sl(String t,double v,double a,double b,int d,ValueChanged<double>f)=>Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[Text(t),Slider(value:v.clamp(a,b),min:a,max:b,divisions:d,onChanged:f)])));}
+class _SettingsState extends State<Settings>{Future<void>backup()async{final raw=const JsonEncoder.withIndent('  ').convert(widget.store.backup());await SharePlus.instance.share(ShareParams(files:[XFile.fromData(utf8.encode(raw),mimeType:'application/json',name:'glia-backup.json')],text:'پشتیبان گلیا کنکور'));}Future<void>restore()async{final r=await FilePicker.pickFiles(type:FileType.custom,allowedExtensions:['json'],withData:true);if(r==null)return;final bytes=r.files.single.bytes;if(bytes==null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('خواندن فایل پشتیبان در این پلتفرم ممکن نیست.')));return;}final raw=utf8.decode(bytes);await widget.store.restore(Map<String,dynamic>.from(jsonDecode(raw)));}Future<void>reset()async{await widget.store.resetProgress();}Future<void>setS(GliaSettings s)=>widget.store.updateSettings(s);@override Widget build(BuildContext c){final s=widget.store.settings;return ListView(padding:const EdgeInsets.all(16),children:[const Text('تنظیمات حرفه‌ای',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),const SizedBox(height:8),const Text('ظاهر، سرعت، تعامل و پشتیبان‌گیری؛ کاملاً آفلاین.',style:TextStyle(color:dim)),Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('رنگ برنامه',style:TextStyle(fontWeight:FontWeight.w800)),const SizedBox(height:10),Wrap(spacing:8,runSpacing:8,children:[_theme('amber','طلایی',gold2,s.theme,setS),_theme('cyan','فیروزه‌ای',teal2,s.theme,setS),_theme('purple','بنفش',const Color(0xFFB58CFF),s.theme,setS),_theme('emerald','سبز',const Color(0xFF37D6A0),s.theme,setS),_theme('rose','رز',const Color(0xFFFF7B6B),s.theme,setS),_theme('blue','آبی',const Color(0xFF6EA8FF),s.theme,setS)])])),_sw('انیمیشن‌ها',s.motion,(v)=>setS(s.copyWith(motion:v)),Icons.animation),_sw('بازخورد لمسی',s.haptics,(v)=>setS(s.copyWith(haptics:v)),Icons.vibration),_sw('Shuffle',s.shuffle,(v)=>setS(s.copyWith(shuffle:v)),Icons.shuffle),_sw('حالت کم‌مصرف',s.lowPower,(v)=>setS(s.copyWith(lowPower:v)),Icons.battery_saver),_sl('مکث کارت',s.delay.toDouble(),1000,8000,14,(v)=>setS(s.copyWith(delay:v.round()))),_sl('اندازه متن',s.fontScale,.8,1.5,14,(v)=>setS(s.copyWith(fontScale:v))),_sl('هدف روزانه',s.dailyGoal.toDouble(),10,100,18,(v)=>setS(s.copyWith(dailyGoal:v.round()))),Card(child:Column(children:[ListTile(leading:const Icon(Icons.ios_share,color:teal),title:const Text('پشتیبان‌گیری'),onTap:backup),ListTile(leading:const Icon(Icons.restore,color:gold2),title:const Text('بازیابی'),onTap:restore),ListTile(leading:const Icon(Icons.delete_sweep,color:rose),title:const Text('ریست کامل'),onTap:reset)])),const Card(child:ListTile(title:Text('Native / Offline'),subtitle:Text('۲۱۵۱ کارت · ۶۳۹ سؤال · ۴۳۴ کارت پک فارسی'))),const Card(child:ListTile(title:Text('ABI انتشار'),subtitle:Text('armeabi-v7a · arm64-v8a · x86_64')))]);}Widget _sw(String t,bool v,ValueChanged<bool>f,IconData i)=>Card(child:SwitchListTile(value:v,onChanged:f,secondary:Icon(i),title:Text(t)));Widget _theme(String id,String label,Color color,String selected,Future<void> Function(GliaSettings) save){return InkWell(onTap:()=>save(widget.store.settings.copyWith(theme:id)),borderRadius:BorderRadius.circular(14),child:Container(width:92,padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:color.withValues(alpha:.12),borderRadius:BorderRadius.circular(14),border:Border.all(color:selected==id?color:Colors.transparent,width:2)),child:Column(children:[CircleAvatar(radius:14,backgroundColor:color),const SizedBox(height:6),Text(label,style:TextStyle(color:color,fontWeight:FontWeight.w800))])));}Widget _sl(String t,double v,double a,double b,int d,ValueChanged<double>f)=>Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[Row(children:[Expanded(child:Text(t)),Text('${(v*100).round()}٪',style:const TextStyle(color:teal2,fontWeight:FontWeight.w800))]),Slider(value:v.clamp(a,b),min:a,max:b,divisions:d,onChanged:f)])));}
