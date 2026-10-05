@@ -1,15 +1,15 @@
 name: glia_leitner
 description: لایتنر هوشمند گلیا کنکور
-publish_to: "none"
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.10.0 <4.0.0"
+  sdk: '>=3.5.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  webview_flutter: ^4.14.1
+  webview_flutter: ^4.13.0
 
 dev_dependencies:
   flutter_test:
@@ -20,11 +20,12 @@ flutter:
   uses-material-design: true
   assets:
     - assets/leitner.html
-    - assets/logo.png
-    - assets/icon.png
+    - assets/glia_app_icon.png
 
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: true
   ios: false
-  image_path: "assets/icon.png"
-  min_sdk_android: 24
+  image_path: assets/glia_app_icon.png
+  adaptive_icon_background: '#081630'
+  adaptive_icon_foreground: assets/glia_app_icon.png
+  min_sdk_android: 21
