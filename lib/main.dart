@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
@@ -12,37 +11,41 @@ class GliaLeitnerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'لایتنر هوشمند | گلیا کنکور',
-      home: LeitnerWebViewPage(),
+      title: 'گلیا کنکور',
+      theme: ThemeData(
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFF0B0F1A),
+      ),
+      home: const LeitnerPage(),
     );
   }
 }
 
-class LeitnerWebViewPage extends StatefulWidget {
-  const LeitnerWebViewPage({super.key});
+class LeitnerPage extends StatefulWidget {
+  const LeitnerPage({super.key});
 
   @override
-  State<LeitnerWebViewPage> createState() => _LeitnerWebViewPageState();
+  State<LeitnerPage> createState() => _LeitnerPageState();
 }
 
-class _LeitnerWebViewPageState extends State<LeitnerWebViewPage> {
+class _LeitnerPageState extends State<LeitnerPage> {
   late final WebViewController _controller;
-  bool _ready = false;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xFF0B0F1A))
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (_) {
-            if (mounted) setState(() => _ready = true);
+            if (mounted) setState(() => _loading = false);
           },
-          onWebResourceError: (_) {},
         ),
       )
       ..loadFlutterAsset('assets/leitner.html');
@@ -50,33 +53,25 @@ class _LeitnerWebViewPageState extends State<LeitnerWebViewPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Color(0xFF0B0F1A),
-        systemNavigationBarColor: Color(0xFF0B0F1A),
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0B0F1A),
-        body: SafeArea(
-          top: true,
-          bottom: false,
-          child: Stack(
-            children: [
-              WebViewWidget(controller: _controller),
-              if (!_ready)
-                const ColoredBox(
-                  color: Color(0xFF0B0F1A),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Color(0xFFE8A94C),
-                    ),
+    return Scaffold(
+      backgroundColor: const Color(0xFF0B0F1A),
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            WebViewWidget(controller: _controller),
+            if (_loading)
+              const ColoredBox(
+                color: Color(0xFF0B0F1A),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Color(0xFFE8A94C),
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
