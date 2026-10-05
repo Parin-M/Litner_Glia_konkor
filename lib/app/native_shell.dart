@@ -57,28 +57,167 @@ class Dashboard extends StatelessWidget{const Dashboard({super.key,required this
 class Categories extends StatelessWidget{const Categories({super.key,required this.data,required this.store,required this.open});final NativeData data;final GliaStore store;final void Function(String,List<LeitnerCard>)open;@override Widget build(BuildContext c)=>ListView(padding:const EdgeInsets.all(16),children:[const Text('همه دسته‌ها',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900)),const SizedBox(height:12),for(final e in <Map<String,dynamic>>[{'t':'انگلیسی','cat':'english','i':Icons.translate,'c':teal},{'t':'افعال بی‌قاعده','cat':'verbs','i':Icons.sync_alt,'c':const Color(0xFFA66CFF)},{'t':'فارسی','cat':'persian','i':Icons.menu_book,'c':const Color(0xFF37D6A0)},{'t':'عربی','cat':'arabic','i':Icons.language,'c':teal2}])Card(child:ListTile(leading:Icon(e['i'] as IconData,color:e['c'] as Color),title:Text(e['t'] as String),subtitle:Text('${data.cards.where((x)=>x.category==e['cat']).length} کارت'),onTap:()=>open(e['t'] as String,data.cards.where((x)=>x.category==e['cat']).toList()))),Card(child:ListTile(leading:const Icon(Icons.auto_stories,color:gold2),title:const Text('پک فارسی'),subtitle:Text('${data.persianPack.length} کارت'),onTap:()=>open('پک فارسی',data.persianPack))),Card(child:ListTile(leading:const Icon(Icons.quiz,color:rose),title:const Text('املا و آزمون'),subtitle:Text('${data.spelling.length} سؤال'),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>QuizPicker(data:data,store:store)))))]);}
 class SmartCenter extends StatelessWidget {
   const SmartCenter({super.key, required this.data, required this.store});
+  final NativeData data;
+  final GliaStore store;
+
+  void openStudy(BuildContext c, String title, List<LeitnerCard> cards) {
+    Navigator.push(c, MaterialPageRoute(builder: (_) => Study(title: title, cards: cards, store: store, dueOnly: false)));
+  }
+
+  @override
+  Widget build(BuildContext c) {
+    final cards = data.allCards;
+    final ready = SmartEngine.readiness(store, cards);
+    final due = cards.where((x) => store.isDue(x.id)).length;
+    final critical = SmartEngine.criticalCards(store, cards);
+    final falseMastery = cards.where((x) => SmartEngine.falseMastery(store, x) >= .35).length;
+    final risk = cards.isEmpty ? 0 : (cards.map((x) => SmartEngine.forgettingRisk(store, x)).reduce((a,b)=>a+b) / cards.length * 100).round();
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('مرکز هوشمند')),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(children: [
+          const Icon(Icons.psychology_alt, size: 46, color: teal2),
+          const SizedBox(height: 8),
+          const Text('مغز هوشمند گلیا', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          Text('$ready٪', style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: gold2)),
+          LinearProgressIndicator(value: ready / 100, color: teal2),
+          const SizedBox(height: 10),
+          Text('$due موعددار · $critical.length بحرانی · $falseMastery مشکوک به یادگیری کاذب · $risk٪ ریسک فراموشی',
+              textAlign: TextAlign.center, style: const TextStyle(color: dim)),
+        ]))),
+
+        _tool(c, Icons.auto_awesome, 'Adaptive Leitner', 'فاصله مرور بر اساس عملکرد واقعی تنظیم می‌شود', () => openStudy(c, 'لایتنر تطبیقی', SmartEngine.smartQueue(store, cards))),
+        _tool(c, Icons.bolt, 'Smart Review', 'اولویت‌بندی هوشمند کارت‌ها', () => openStudy(c, 'مرور هوشمند', SmartEngine.smartQueue(store, cards))),
+        _tool(c, Icons.warning_amber, 'Critical Cards', '${critical.length} کارت با بیشترین ریسک', () => openStudy(c, 'کارت‌های بحرانی', critical)),
+        _tool(c, Icons.psychology, 'Similar Cards · Noql', 'جست‌وجوی معنایی کاملاً آفلاین', () => Navigator.push(c, MaterialPageRoute(builder: (_) => NoqlSearch(data: data, store: store)))),
+        _tool(c, Icons.compare_arrows, 'Confusion Detection', 'کارت‌هایی که احتمالاً با هم اشتباه می‌شوند', () => Navigator.push(c, MaterialPageRoute(builder: (_) => ConfusionScreen(data: data, store: store)))),
+        _tool(c, Icons.skip_next, 'Smart Next Card', 'انتخاب بهترین کارت بعدی بعد از هر پاسخ', () => openStudy(c, 'کارت بعدی هوشمند', SmartEngine.smartQueue(store, cards, limit: 12))),
+        _tool(c, Icons.trending_down, 'Weakness Detection', 'ضعف‌های درس و مبحث را پیدا می‌کند', () => Navigator.push(c, MaterialPageRoute(builder: (_) => WeaknessScreen(data: data, store: store)))),
+        _tool(c, Icons.fact_check, 'False Mastery', '$falseMastery کارت نیازمند راستی‌آزمایی', () => openStudy(c, 'راستی‌آزمایی یادگیری', cards.where((x)=>SmartEngine.falseMastery(store,x)>=.35).toList())),
+        _tool(c, Icons.memory, 'Memory Stability', 'پایداری و ریسک فراموشی هر کارت', () => Navigator.push(c, MaterialPageRoute(builder: (_) => StabilityScreen(data: data, store: store)))),
+        _tool(c, Icons.school, 'Smart Coach', 'مربی آفلاین بر اساس داده واقعی تو', () => Navigator.push(c, MaterialPageRoute(builder: (_) => CoachScreen(data: data, store: store)))),
+        _tool(c, Icons.local_fire_department, 'AI Challenge', 'چالش پویا از کارت‌های بحرانی و ضعیف', () => openStudy(c, 'چالش هوشمند', SmartEngine.challenge(store, cards, limit: 20))),
+        _tool(c, Icons.nights_stay, 'Exam Mode', 'شب قبل آزمون: مرور فشرده و کم‌ریسک', () => openStudy(c, 'حالت آزمون', SmartEngine.smartQueue(store, cards, limit: 30))),
+        _tool(c, Icons.search, 'Semantic Search', 'جست‌وجو بر اساس مفهوم نه فقط کلمه', () => Navigator.push(c, MaterialPageRoute(builder: (_) => NoqlSearch(data: data, store: store)))),
+        _tool(c, Icons.hub, 'Smart Groups', 'گروه‌بندی هوشمند بر اساس درس و شباهت', () => Navigator.push(c, MaterialPageRoute(builder: (_) => SmartGroupsScreen(data: data, store: store)))),
+        _tool(c, Icons.lightbulb_outline, 'Smart Hint', 'راهنمای کوتاه بدون لو دادن پاسخ', () => Navigator.push(c, MaterialPageRoute(builder: (_) => AiCardScreen(data: data, store: store, mode: 'hint')))),
+        _tool(c, Icons.auto_fix_high, 'Memory Trick', 'ساخت تداعی ساده برای به خاطر سپاری', () => Navigator.push(c, MaterialPageRoute(builder: (_) => AiCardScreen(data: data, store: store, mode: 'memory')))),
+        _tool(c, Icons.link, 'Knowledge Chain', 'زنجیره کارت‌های مرتبط در همان درس', () => Navigator.push(c, MaterialPageRoute(builder: (_) => KnowledgeChainScreen(data: data, store: store)))),
+        _tool(c, Icons.restore, 'Recovery Mode', 'بازگشت تدریجی بعد از وقفه', () => openStudy(c, 'بازگشت هوشمند', SmartEngine.recoveryQueue(store, cards))),
+        _tool(c, Icons.menu_book, 'AI Explanation', 'توضیح آفلاین مبتنی بر محتوای کارت', () => Navigator.push(c, MaterialPageRoute(builder: (_) => AiCardScreen(data: data, store: store, mode: 'explain')))),
+        const SizedBox(height: 8),
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Text(SmartEngine.coach(store, cards), style: const TextStyle(height: 1.8)))),
+      ]),
+    );
+  }
+
+  Widget _tool(BuildContext c, IconData icon, String title, String subtitle, VoidCallback onTap) =>
+      Card(child: ListTile(leading: Icon(icon, color: teal2), title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), subtitle: Text(subtitle), trailing: const Icon(Icons.chevron_left), onTap: onTap));
+}
+
+class ConfusionScreen extends StatelessWidget {
+  const ConfusionScreen({super.key, required this.data, required this.store});
   final NativeData data; final GliaStore store;
   @override Widget build(BuildContext c) {
-    final cards=data.allCards; final ready=SmartEngine.readiness(store,cards); final weak=SmartEngine.weakLessons(store,cards); final due=cards.where((x)=>store.isDue(x.id)).length;
-    return Scaffold(appBar:AppBar(title:const Text('مرکز هوشمند')),body:ListView(padding:const EdgeInsets.all(16),children:[
-      Card(child:Padding(padding:const EdgeInsets.all(18),child:Column(children:[const Icon(Icons.psychology_alt,size:46,color:teal2),const SizedBox(height:8),const Text('آمادگی هوشمند',style:TextStyle(fontSize:20,fontWeight:FontWeight.w900)),const SizedBox(height:10),Text('$ready٪',style:const TextStyle(fontSize:38,fontWeight:FontWeight.w900,color:gold2)),const SizedBox(height:8),LinearProgressIndicator(value:ready/100,color:teal2)]))),
-      Card(child:ListTile(leading:const Icon(Icons.auto_awesome,color:gold2),title:const Text('مرور هوشمند'),subtitle:Text('$due کارت با اولویت بالا'),onTap:(){final q=SmartEngine.smartQueue(store,cards);Navigator.push(c,MaterialPageRoute(builder:(_)=>Study(title:'مرور هوشمند',cards:q,store:store,dueOnly:false)));})),
-      Card(child:ListTile(leading:const Icon(Icons.psychology_alt,color:teal2),title:const Text('AI آفلاین گلیا · Noql'),subtitle:const Text('پیدا کردن کارت‌های معنایی مشابه، بدون اینترنت'),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>NoqlSearch(data:data,store:store))))),
-      Card(child:ListTile(leading:const Icon(Icons.tune,color:teal2),title:const Text('آزمون تطبیقی'),subtitle:const Text('سختی سؤال بعدی با عملکردت تغییر می‌کند'),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>AdaptiveQuiz(data:data,store:store))))),
-      Card(child:ListTile(leading:const Icon(Icons.nights_stay,color:Color(0xFFB58CFF)),title:const Text('شب قبل آزمون'),subtitle:const Text('مرور سریع کارت‌های ضعیف و پرتکرار'),onTap:(){final q=SmartEngine.smartQueue(store,cards,limit:30);Navigator.push(c,MaterialPageRoute(builder:(_)=>Study(title:'شب قبل آزمون',cards:q,store:store,dueOnly:false)));})),
-      Card(child:ListTile(leading:const Icon(Icons.local_fire_department,color:rose),title:const Text('چالش روزانه'),subtitle:const Text('۲۰ کارت با تمرکز روی نقاط ضعف'),onTap:(){final q=SmartEngine.challenge(store,cards);Navigator.push(c,MaterialPageRoute(builder:(_)=>Study(title:'چالش روزانه',cards:q,store:store,dueOnly:false)));})),
-      Card(child:ListTile(leading:const Icon(Icons.bolt,color:gold2),title:const Text('مرور سریع ۱۰ کارت'),subtitle:const Text('یک جلسه کوتاه و فشرده'),onTap:(){final q=SmartEngine.smartQueue(store,cards,limit:10);Navigator.push(c,MaterialPageRoute(builder:(_)=>Study(title:'مرور سریع',cards:q,store:store,dueOnly:false)));})),
-      Card(child:ListTile(leading:const Icon(Icons.warning_amber,color:rose),title:const Text('فقط کارت‌های سخت'),subtitle:const Text('کارت‌هایی که بیشترین نیاز به تمرین دارند'),onTap:(){final q=SmartEngine.rank(store,cards).where((x)=>x.difficulty==SmartDifficulty.hard||x.difficulty==SmartDifficulty.critical).take(30).map((x)=>x.card).toList();Navigator.push(c,MaterialPageRoute(builder:(_)=>Study(title:'کارت‌های سخت',cards:q,store:store,dueOnly:false)));})),
-      Card(child:ListTile(leading:const Icon(Icons.schedule,color:teal2),title:const Text('فقط مرورهای موعددار'),subtitle:Text('$due کارت موعددار'),onTap:(){final q=cards.where((x)=>store.isDue(x.id)).toList();Navigator.push(c,MaterialPageRoute(builder:(_)=>Study(title:'مرورهای موعددار',cards:q,store:store,dueOnly:false)));})),
-
-      Card(child:ListTile(leading:const Icon(Icons.timer,color:gold2),title:const Text('تمرکز / پومودورو'),subtitle:const Text('جلسه ۲۵ دقیقه‌ای مطالعه بدون حواس‌پرتی'),onTap:()=>Navigator.push(c,MaterialPageRoute(builder:(_)=>FocusTimer(store:store))))),
-      Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('مربی هوشمند',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:8),Text(SmartEngine.coach(store,cards),style:const TextStyle(height:1.7)),]))),
-      if(weak.isNotEmpty) Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('نقاط ضعف',style:TextStyle(fontWeight:FontWeight.w900)),...weak.entries.map((e)=>ListTile(dense:true,leading:const Icon(Icons.warning_amber,color:rose),title:Text(e.key),trailing:Text('${e.value} کارت')))]))),
+    final groups = <String, List<LeitnerCard>>{};
+    for (final card in data.allCards) { groups.putIfAbsent(card.lesson, () => []).add(card); }
+    return Scaffold(appBar: AppBar(title: const Text('تشخیص اشتباهات مشابه')), body: ListView(padding: const EdgeInsets.all(16), children: [
+      const Text('کارت‌های هم‌درس با خطای تکرارشونده را کنار هم ببین:', style: TextStyle(color: dim)),
+      for (final e in groups.entries.where((e) => e.value.length > 1).take(20))
+        Card(child: ExpansionTile(title: Text(e.key), subtitle: Text('${e.value.length} کارت'), children: [
+          for (final card in SmartEngine.smartQueue(store, e.value, limit: 5))
+            ListTile(title: Text(card.front), subtitle: Text(card.back)),
+        ])),
     ]));
   }
 }
 
-class NoqlSearch extends StatefulWidget {
+class WeaknessScreen extends StatelessWidget {
+  const WeaknessScreen({super.key, required this.data, required this.store});
+  final NativeData data; final GliaStore store;
+  @override Widget build(BuildContext c) {
+    final weak = SmartEngine.weakLessons(store, data.allCards);
+    return Scaffold(appBar: AppBar(title: const Text('نقاط ضعف')), body: ListView(padding: const EdgeInsets.all(16), children: [
+      for (final e in weak.entries) Card(child: ListTile(leading: const Icon(Icons.warning_amber, color: rose), title: Text(e.key), trailing: Text('${e.value} کارت'))),
+    ]));
+  }
+}
+
+class StabilityScreen extends StatelessWidget {
+  const StabilityScreen({super.key, required this.data, required this.store});
+  final NativeData data; final GliaStore store;
+  @override Widget build(BuildContext c) {
+    final ranked = data.allCards.map((x)=>SmartEngine.stability(store,x)).toList()
+      ..sort((a,b)=>b.forgettingRisk.compareTo(a.forgettingRisk));
+    return Scaffold(appBar: AppBar(title: const Text('پایداری حافظه')), body: ListView.builder(
+      padding: const EdgeInsets.all(12), itemCount: math.min(100, ranked.length),
+      itemBuilder: (_,i){final x=ranked[i]; return Card(child: ListTile(title: Text(x.card.front), subtitle: Text('پایداری ${(x.stability*100).round()}٪ · ریسک ${(x.forgettingRisk*100).round()}٪'), trailing: Text('${x.confidence.round()}٪'));}));
+  }
+}
+
+class CoachScreen extends StatelessWidget {
+  const CoachScreen({super.key, required this.data, required this.store});
+  final NativeData data; final GliaStore store;
+  @override Widget build(BuildContext c) => Scaffold(appBar: AppBar(title: const Text('مربی هوشمند')), body: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Icon(Icons.school, color: teal2, size: 48),
+      const SizedBox(height: 12),
+      Text(SmartEngine.coach(store, data.allCards), style: const TextStyle(fontSize: 18, height: 1.9)),
+      const SizedBox(height: 20),
+      Text(SmartEngine.recoveryCoach(store, data.allCards), style: const TextStyle(color: dim, height: 1.8)),
+    ]),
+  ));
+}
+
+class SmartGroupsScreen extends StatelessWidget {
+  const SmartGroupsScreen({super.key, required this.data, required this.store});
+  final NativeData data; final GliaStore store;
+  @override Widget build(BuildContext c) {
+    final groups = <String, List<LeitnerCard>>{};
+    for (final card in data.allCards) { groups.putIfAbsent(card.lesson.isEmpty ? 'بدون درس' : card.lesson, () => []).add(card); }
+    return Scaffold(appBar: AppBar(title: const Text('گروه‌های هوشمند')), body: ListView(padding: const EdgeInsets.all(16), children: [
+      const Text('گروه‌بندی محلی و آفلاین بر اساس درس؛ کارت‌های هر گروه با موتور هوشمند مرتب شده‌اند.', style: TextStyle(color: dim, height: 1.7)),
+      for (final e in groups.entries.take(30))
+        Card(child: ListTile(title: Text(e.key), subtitle: Text('${e.value.length} کارت'), onTap: ()=>Navigator.push(c, MaterialPageRoute(builder: (_)=>Study(title:e.key,cards:SmartEngine.smartQueue(store,e.value,limit:20),store:store,dueOnly:false))))),
+    ]));
+  }
+}
+
+class KnowledgeChainScreen extends StatelessWidget {
+  const KnowledgeChainScreen({super.key, required this.data, required this.store});
+  final NativeData data; final GliaStore store;
+  @override Widget build(BuildContext c) {
+    final card = SmartEngine.smartQueue(store, data.allCards, limit: 1).firstOrNull;
+    final chain = card == null ? <LeitnerCard>[] : SmartEngine.knowledgeChain(store, data.allCards, card);
+    return Scaffold(appBar: AppBar(title: const Text('زنجیره دانشی')), body: ListView(padding: const EdgeInsets.all(16), children: [
+      for (var i=0;i<chain.length;i++) Card(child: ListTile(leading: CircleAvatar(child: Text('${i+1}')), title: Text(chain[i].front), subtitle: Text(chain[i].back))),
+    ]));
+  }
+}
+
+class AiCardScreen extends StatefulWidget {
+  const AiCardScreen({super.key, required this.data, required this.store, required this.mode});
+  final NativeData data; final GliaStore store; final String mode;
+  @override State<AiCardScreen> createState()=>_AiCardScreenState();
+}
+class _AiCardScreenState extends State<AiCardScreen> {
+  late LeitnerCard card;
+  @override void initState(){super.initState(); card=SmartEngine.smartQueue(widget.store,widget.data.allCards,limit:1).first;}
+  @override Widget build(BuildContext c){
+    final text = widget.mode=='hint' ? SmartEngine.hint(card) : widget.mode=='memory' ? SmartEngine.memoryTrick(card) : SmartEngine.explain(card);
+    final title = widget.mode=='hint' ? 'راهنمای هوشمند' : widget.mode=='memory' ? 'ترفند حافظه' : 'توضیح آفلاین';
+    return Scaffold(appBar:AppBar(title:Text(title)),body:ListView(padding:const EdgeInsets.all(16),children:[
+      Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(children:[
+        Text(card.front,style:const TextStyle(fontSize:26,fontWeight:FontWeight.w900,color:gold2),textAlign:TextAlign.center),
+        const SizedBox(height:18),Text(text,style:const TextStyle(fontSize:18,height:1.9)),
+      ]))),
+      FilledButton.icon(onPressed:()=>setState(()=>card=SmartEngine.smartQueue(widget.store,widget.data.allCards.where((x)=>x.id!=card.id).toList(),limit:1).first),icon:const Icon(Icons.refresh),label:const Text('کارت دیگر')),
+    ]));
+  }
+}\nclass NoqlSearch extends StatefulWidget {
   const NoqlSearch({super.key, required this.data, required this.store});
   final NativeData data;
   final GliaStore store;
