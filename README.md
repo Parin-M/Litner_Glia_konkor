@@ -24,13 +24,15 @@
 `tool/generate_native_data.dart` آرایه‌های JavaScript موجود در دو فایل مرجع را در زمان build می‌خواند و به JSON داخلی Flutter تبدیل می‌کند. در APK هیچ WebView یا JavaScript runtime لازم نیست.
 
 ## Release و Play Protect
-برای Release از keystore ثابت استفاده می‌شود. چهار Secret زیر باید در GitHub Repository تنظیم شوند:
-- `GLIA_KEYSTORE_B64`
-- `GLIA_STORE_PASSWORD`
-- `GLIA_KEY_ALIAS`
-- `GLIA_KEY_PASSWORD`
+برای Release از **یک keystore ثابت** استفاده می‌شود تا نسخه‌های بعدی با همان کلید قابل Update باشند. چهار Secret زیر را در GitHub Repository → Settings → Secrets and variables → Actions قرار دهید:
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
 
-کلید خصوصی داخل Git قرار نمی‌گیرد. برای Google Play، AAB و Play App Signing مسیر پیشنهادی انتشار رسمی است. Play Protect را نمی‌توان از طرف APK به‌صورت مطلق تضمین کرد، اما این نسخه از WebView/کد راه‌دور/مجوزهای غیرضروری استفاده نمی‌کند و با امضای Release ثابت برای انتشار امن‌تر آماده شده است.
+کلید خصوصی داخل Git قرار نمی‌گیرد. اگر Secretها تنظیم نشده باشند، CI فقط APK اعتبارسنجی می‌سازد؛ Release رسمی بدون امضای ثابت منتشر نمی‌شود.
+
+برای Google Play، انتشار AAB با Play App Signing بهترین مسیر است. Play Protect را نمی‌توان ۱۰۰٪ تضمین کرد، اما این نسخه WebView اجرایی، کد راه‌دور یا مجوزهای غیرضروری ندارد و برای امضای Release ثابت آماده شده است.
 
 ## Build
-GitHub Actions سه APK جداگانه، AAB و SHA256 تولید می‌کند و برای Tagهای `v*` آن‌ها را در GitHub Releases قرار می‌دهد.
+GitHub Actions سه APK جداگانه برای `armeabi-v7a`، `arm64-v8a` و `x86_64` تولید می‌کند، آن‌ها را با SHA256 بررسی می‌کند و در صورت وجود keystore ثابت، برای Tagهای `v*` در GitHub Releases قرار می‌دهد.
