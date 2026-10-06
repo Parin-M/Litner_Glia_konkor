@@ -199,49 +199,353 @@ class _AdvancedStatsState extends State<AdvancedStats> {
     );
   }
 
-  Widget _lessonRanking(List<MapEntry<String, _LessonStat>> items, bool strengths) => Card(color: _statsSurface, child: Padding(padding: const EdgeInsets.all(14), child: Column(children: [
-        Row(children: [Icon(strengths ? Icons.emoji_events : Icons.warning_amber, color: strengths ? _statsGold : _statsRose), const SizedBox(width: 8), Text(strengths ? 'بهترین درس‌ها' : 'نیازمند توجه', style: const TextStyle(fontWeight: FontWeight.w800))]),
-        const SizedBox(height: 8),
-        if (items.isEmpty) const Text('هنوز داده کافی نداریم.', style: TextStyle(color: _statsDim)) else for (final e in items) Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Column(children: [Row(children: [Expanded(child: Text(e.key, maxLines: 1, overflow: TextOverflow.ellipsis)), Text('${(e.value.accuracy * 100).round()}٪', style: TextStyle(color: strengths ? _statsTeal : _statsRose, fontWeight: FontWeight.w900))]), const SizedBox(height: 5), ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: e.value.accuracy.clamp(0, 1), minHeight: 7, color: strengths ? _statsTeal : _statsRose, backgroundColor: _statsSurface2))]))
-      ]));
-
-  Widget _memoryCard(double mastery, double risk, int critical, int falseMastery) => Card(color: _statsSurface, child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
-        _bar('تسلط کلی', mastery, _statsTeal),
-        _bar('ریسک فراموشی', risk, _statsRose),
-        const SizedBox(height: 8),
-        Row(children: [Expanded(child: _miniBox('$critical', 'کارت بحرانی', _statsRose)), const SizedBox(width: 8), Expanded(child: _miniBox('$falseMastery', 'یادگیری کاذب', _statsGold))]),
-      ]));
-
-  Widget _bar(String label, double value, Color color) => Padding(padding: const EdgeInsets.symmetric(vertical: 7), child: Column(children: [Row(children: [Expanded(child: Text(label)), Text('${(value * 100).round()}٪', style: TextStyle(color: color, fontWeight: FontWeight.w900))]), const SizedBox(height: 6), ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: value.clamp(0, 1), minHeight: 8, color: color, backgroundColor: _statsSurface2))]));
-
-  Widget _miniBox(String value, String label, Color color) => Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: _statsSurface2, borderRadius: BorderRadius.circular(14)), child: Row(children: [Icon(Icons.circle, size: 9, color: color), const SizedBox(width: 7), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)), Text(label, style: const TextStyle(color: _statsDim, fontSize: 11))]))]));
-
-  Widget _coachCard(int readiness, double accuracy, int due, int weak, int critical, int falseMastery) {
-    final tips = <String>[];
-    if (due > 0) tips.add('$due کارت موعد مرور دارند؛ اول آن‌ها را انجام بده.');
-    if (accuracy < .7) tips.add('دقت فعلی پایین است؛ تعداد کارت‌های جدید را موقتاً کمتر کن.');
-    if (weak > 0) tips.add('$weak کارت در خانه‌های ضعیف قرار دارند و ارزش مرور بیشتری دارند.');
-    if (critical > 0) tips.add('$critical کارت ریسک بالایی دارند؛ مرور هوشمند را اجرا کن.');
-    if (falseMastery > 0) tips.add('$falseMastery کارت مشکوک به یادگیری کاذب‌اند؛ چند مرور فاصله‌دار برایشان مفید است.');
-    if (tips.isEmpty) tips.add('روند یادگیری خوب است؛ همین ریتم را حفظ کن.');
-    return Card(color: _statsSurface, child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [const Icon(Icons.psychology, color: _statsTeal), const SizedBox(width: 8), const Text('پیشنهاد مربی هوشمند', style: TextStyle(fontWeight: FontWeight.w900))]), const SizedBox(height: 8), Text('شاخص آمادگی: $readiness٪', style: const TextStyle(color: _statsGold, fontWeight: FontWeight.w900)), const SizedBox(height: 8), for (final tip in tips) Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('• $tip', style: const TextStyle(color: _statsDim, height: 1.45)))])));
+  Widget _lessonRanking(
+    List<MapEntry<String, _LessonStat>> items,
+    bool strengths,
+  ) {
+    return Card(
+      color: _statsSurface,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(
+                  strengths ? Icons.emoji_events : Icons.warning_amber,
+                  color: strengths ? _statsGold : _statsRose,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  strengths ? 'بهترین درس‌ها' : 'نیازمند توجه',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (items.isEmpty)
+              const Text(
+                'هنوز داده کافی نداریم.',
+                style: TextStyle(color: _statsDim),
+              )
+            else
+              for (final e in items)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              e.key,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            '${(e.value.accuracy * 100).round()}٪',
+                            style: TextStyle(
+                              color: strengths ? _statsTeal : _statsRose,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: e.value.accuracy.clamp(0, 1),
+                          minHeight: 7,
+                          color: strengths ? _statsTeal : _statsRose,
+                          backgroundColor: _statsSurface2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _recordsCard(GliaStore store, Map<DateTime, _DayStat> recent) => Card(color: _statsSurface, child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
-        _record('🔥', 'بهترین استریک فعلی', '${store.streak} روز'),
-        _record('🎯', 'بیشترین مرور در بازه', '${recent.values.fold<int>(0, (m, x) => x.reviewed > m ? x.reviewed : m)} کارت'),
-        _record('✅', 'مجموع پاسخ درست', '${store.correct}'),
-        _record('📚', 'کل کارت‌ها', '${widget.data.allCards.length}'),
-      ]));
+  Widget _memoryCard(
+    double mastery,
+    double risk,
+    int critical,
+    int falseMastery,
+  ) {
+    return Card(
+      color: _statsSurface,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _bar('تسلط کلی', mastery, _statsTeal),
+            _bar('ریسک فراموشی', risk, _statsRose),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _miniBox(
+                    '$critical',
+                    'کارت بحرانی',
+                    _statsRose,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _miniBox(
+                    '$falseMastery',
+                    'یادگیری کاذب',
+                    _statsGold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-  Widget _record(String emoji, String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Row(children: [Text(emoji, style: const TextStyle(fontSize: 18)), const SizedBox(width: 10), Expanded(child: Text(label)), Text(value, style: const TextStyle(fontWeight: FontWeight.w900, color: _statsTeal))]));
+  Widget _bar(String label, double value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(label)),
+              Text(
+                '${(value * 100).round()}٪',
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: value.clamp(0, 1),
+              minHeight: 8,
+              color: color,
+              backgroundColor: _statsSurface2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _weeklyReport(int reviewed, int correct, double mastery, int readiness, List<MapEntry<String, _LessonStat>> weakLessons) => Card(color: _statsSurface, child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('گزارش قابل‌فهم هفته', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-        const SizedBox(height: 10),
-        Text('این هفته $reviewed مرور ثبت شده و ${correct == 0 ? 'هنوز پاسخ درست ثبت نشده' : '$correct پاسخ درست'} داری. میزان تسلط فعلی ${(mastery * 100).round()}٪ و شاخص آمادگی $readiness٪ است.', style: const TextStyle(height: 1.7)),
-        if (weakLessons.isNotEmpty) ...[const SizedBox(height: 8), Text('درس‌هایی که بهتر است بیشتر روی آن‌ها کار کنی: ${weakLessons.map((e) => e.key).join('، ')}.', style: const TextStyle(color: _statsRose, height: 1.6))],
-      ]));
+  Widget _miniBox(String value, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _statsSurface2,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.circle, size: 9, color: color),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: _statsDim,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _coachCard(
+    int readiness,
+    double accuracy,
+    int due,
+    int weak,
+    int critical,
+    int falseMastery,
+  ) {
+    final tips = <String>[];
+    if (due > 0) {
+      tips.add('$due کارت موعد مرور دارند؛ اول آن‌ها را انجام بده.');
+    }
+    if (accuracy < .7) {
+      tips.add('دقت فعلی پایین است؛ تعداد کارت‌های جدید را موقتاً کمتر کن.');
+    }
+    if (weak > 0) {
+      tips.add('$weak کارت در خانه‌های ضعیف قرار دارند و ارزش مرور بیشتری دارند.');
+    }
+    if (critical > 0) {
+      tips.add('$critical کارت ریسک بالایی دارند؛ مرور هوشمند را اجرا کن.');
+    }
+    if (falseMastery > 0) {
+      tips.add(
+        '$falseMastery کارت مشکوک به یادگیری کاذب‌اند؛ چند مرور فاصله‌دار برایشان مفید است.',
+      );
+    }
+    if (tips.isEmpty) {
+      tips.add('روند یادگیری خوب است؛ همین ریتم را حفظ کن.');
+    }
+
+    return Card(
+      color: _statsSurface,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.psychology, color: _statsTeal),
+                const SizedBox(width: 8),
+                const Text(
+                  'پیشنهاد مربی هوشمند',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'شاخص آمادگی: $readiness٪',
+              style: const TextStyle(
+                color: _statsGold,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final tip in tips)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  '• $tip',
+                  style: const TextStyle(
+                    color: _statsDim,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _recordsCard(
+    GliaStore store,
+    Map<DateTime, _DayStat> recent,
+  ) {
+    final maxReviews = recent.values.fold<int>(
+      0,
+      (max, day) => day.reviewed > max ? day.reviewed : max,
+    );
+
+    return Card(
+      color: _statsSurface,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _record('🔥', 'بهترین استریک فعلی', '${store.streak} روز'),
+            _record('🎯', 'بیشترین مرور در بازه', '$maxReviews کارت'),
+            _record('✅', 'مجموع پاسخ درست', '${store.correct}'),
+            _record('📚', 'کل کارت‌ها', '${widget.data.allCards.length}'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _record(String emoji, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 10),
+          Expanded(child: Text(label)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              color: _statsTeal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _weeklyReport(
+    int reviewed,
+    int correct,
+    double mastery,
+    int readiness,
+    List<MapEntry<String, _LessonStat>> weakLessons,
+  ) {
+    final correctText = correct == 0
+        ? 'هنوز پاسخ درست ثبت نشده'
+        : '$correct پاسخ درست';
+    final weakText = weakLessons.map((e) => e.key).join('، ');
+
+    return Card(
+      color: _statsSurface,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'گزارش قابل‌فهم هفته',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'این هفته $reviewed مرور ثبت شده و $correctText داری. '
+              'میزان تسلط فعلی ${(mastery * 100).round()}٪ '
+              'و شاخص آمادگی $readiness٪ است.',
+              style: const TextStyle(height: 1.7),
+            ),
+            if (weakLessons.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'درس‌هایی که بهتر است بیشتر روی آن‌ها کار کنی: $weakText.',
+                style: const TextStyle(
+                  color: _statsRose,
+                  height: 1.6,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
   Map<String, _LessonStat> _lessonStats(List<LeitnerCard> cards) {
     final result = <String, _LessonStat>{};
