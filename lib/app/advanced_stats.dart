@@ -139,14 +139,64 @@ class _AdvancedStatsState extends State<AdvancedStats> {
   Widget _trendCard(Map<DateTime, _DayStat> points, int days) {
     final values = List.generate(days, (i) {
       final d = DateTime.now().subtract(Duration(days: days - i - 1));
-      return points[_day(d)] ?? const _DayStat();
+      return points[_day(d)] ?? _DayStat(date: _day(d));
     });
     final maxValue = values.fold<int>(1, (m, x) => x.reviewed > m ? x.reviewed : m);
-    return Card(color: _statsSurface, child: Padding(padding: const EdgeInsets.fromLTRB(14, 16, 14, 12), child: Column(children: [
-      Row(children: [const Icon(Icons.show_chart, color: _statsTeal), const SizedBox(width: 8), Text('$days روز اخیر', style: const TextStyle(fontWeight: FontWeight.w800)), const Spacer(), Text('${values.fold<int>(0, (a, b) => a + b.reviewed)} مرور', style: const TextStyle(color: _statsDim))]),
-      const SizedBox(height: 16),
-      SizedBox(height: 120, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [for (final x in values) Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [Text('${x.reviewed}', style: const TextStyle(fontSize: 9, color: _statsDim)), const SizedBox(height: 4), AnimatedContainer(duration: const Duration(milliseconds: 350), height: 8 + 78 * x.reviewed / maxValue, decoration: BoxDecoration(color: _statsTeal.withValues(alpha: .72), borderRadius: BorderRadius.circular(7))), const SizedBox(height: 4), Text('${x.date.day}', style: const TextStyle(fontSize: 9, color: _statsDim))])))])),
-    ])));
+
+    return Card(
+      color: _statsSurface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.show_chart, color: _statsTeal),
+                const SizedBox(width: 8),
+                Text('$days روز اخیر', style: const TextStyle(fontWeight: FontWeight.w800)),
+                const Spacer(),
+                Text(
+                  '${values.fold<int>(0, (a, b) => a + b.reviewed)} مرور',
+                  style: const TextStyle(color: _statsDim),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 120,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (final x in values)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text('${x.reviewed}', style: const TextStyle(fontSize: 9, color: _statsDim)),
+                            const SizedBox(height: 4),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 350),
+                              height: 8 + 78 * x.reviewed / maxValue,
+                              decoration: BoxDecoration(
+                                color: _statsTeal.withValues(alpha: .72),
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text('${x.date.day}', style: const TextStyle(fontSize: 9, color: _statsDim)),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _lessonRanking(List<MapEntry<String, _LessonStat>> items, bool strengths) => Card(color: _statsSurface, child: Padding(padding: const EdgeInsets.all(14), child: Column(children: [
@@ -236,7 +286,8 @@ class _LessonStat {
 }
 
 class _DayStat {
-  const _DayStat({this.date = const DateTime(2000), this.reviewed = 0, this.correct = 0});
+  _DayStat({DateTime? date, this.reviewed = 0, this.correct = 0})
+      : date = date ?? DateTime(2000);
   final DateTime date;
   final int reviewed;
   final int correct;
