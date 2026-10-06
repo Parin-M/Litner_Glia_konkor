@@ -47,71 +47,11 @@ jobs:
             sed -i '/android {/a\    packagingOptions { jniLibs { useLegacyPackaging false } }' android/app/build.gradle
             sed -i '/buildTypes {/a\        release { minifyEnabled true }' android/app/build.gradle
           fi
-          if [ -f android/app/src/main/AndroidManifest.xml ]; then
-            grep -E 'uses-permission' android/app/src/main/AndroidManifest.xml || true
-          fi
 
       - name: Restore app icon
         run: |
           mkdir -p assets
           base64 --decode assets/glia_app_icon.png.b64 > assets/glia_icon.png
-
-      - name: Configure persistent release signing
-        shell: bash
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          set -euo pipefail
-          : "${ANDROID_KEYSTORE_BASE64:?Missing ANDROID_KEYSTORE_BASE64 GitHub secret}"
-          : "${ANDROID_KEYSTORE_PASSWORD:?Missing ANDROID_KEYSTORE_PASSWORD GitHub secret}"
-          : "${ANDROID_KEY_ALIAS:?Missing ANDROID_KEY_ALIAS GitHub secret}"
-          : "${ANDROID_KEY_PASSWORD:?Missing ANDROID_KEY_PASSWORD GitHub secret}"
-
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release.jks
-          test -s android/release.jks
-
-          cat > android/key.properties <<EOF
-          storePassword=${ANDROID_KEYSTORE_PASSWORD}
-          keyPassword=${ANDROID_KEY_PASSWORD}
-          keyAlias=${ANDROID_KEY_ALIAS}
-          storeFile=../release.jks
-          EOF
-
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("android/app/build.gradle.kts")
-          if p.exists():
-              s = p.read_text()
-              header = '''import java.util.Properties
-
-          val keystoreProperties = Properties().apply {
-              val file = rootProject.file("key.properties")
-              if (file.exists()) load(file.inputStream())
-          }
-
-          '''
-              if "val keystoreProperties = Properties()" not in s:
-                  s = header + s
-              signing = '''    signingConfigs {
-                  create("release") {
-                      keyAlias = keystoreProperties["keyAlias"] as String
-                      keyPassword = keystoreProperties["keyPassword"] as String
-                      storeFile = file(keystoreProperties["storeFile"] as String)
-                      storePassword = keystoreProperties["storePassword"] as String
-                  }
-              }
-
-          '''
-              if 'create("release")' not in s:
-                  s = s.replace("    buildTypes {", signing + "    buildTypes {", 1)
-              s = s.replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
-              if 'signingConfig = signingConfigs.getByName("release")' not in s:
-                  s = s.replace('release {', 'release {\n        signingConfig = signingConfigs.getByName("release")', 1)
-              p.write_text(s)
-          PY
 
       - name: Build Noql offline AI assets
         shell: bash
@@ -155,9 +95,3 @@ jobs:
           generate_release_notes: true
           files: |
             build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Cleanup signing material
-        if: always()
-        shell: bash
-        run: |
-          rm -f android/release.jks android/key.properties
