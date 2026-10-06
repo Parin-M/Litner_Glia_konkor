@@ -1,7 +1,7 @@
 name: glia_leitner
 description: لایتنر هوشمند گلیا کنکور - Native Flutter
 publish_to: 'none'
-version: 2.2.0+4
+version: 2.3.0+5
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
@@ -16,6 +16,7 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_onnxruntime: ^1.8.5
   dart_sentencepiece_tokenizer: ^1.4.1
+  archive: ^4.3.0
 
 dev_dependencies:
   flutter_test:
