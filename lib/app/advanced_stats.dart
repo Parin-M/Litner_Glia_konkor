@@ -31,7 +31,7 @@ class _AdvancedStatsState extends State<AdvancedStats> {
     final reviewed = widget.store.reviewed;
     final correct = widget.store.correct;
     final accuracy = reviewed == 0 ? 0.0 : correct / reviewed;
-    final known = cards.where(widget.store.isKnown).length;
+    final known = cards.where((c) => widget.store.isKnown(c.id)).length;
     final due = cards.where((c) => widget.store.isDue(c.id)).length;
     final weak = cards.where((c) => widget.store.boxFor(c.id) <= 2).length;
     final mastery = cards.isEmpty ? 0.0 : known / cards.length;
@@ -42,8 +42,8 @@ class _AdvancedStatsState extends State<AdvancedStats> {
         ? 0.0
         : cards.map((c) => SmartEngine.forgettingRisk(widget.store, c)).fold<double>(0, (a, b) => a + b) / cards.length;
     final lessons = _lessonStats(cards);
-    final topLessons = lessons.toList()..sort((a, b) => b.value.accuracy.compareTo(a.value.accuracy));
-    final weakLessons = lessons.toList()..sort((a, b) => a.value.accuracy.compareTo(b.value.accuracy));
+    final topLessons = lessons.entries.toList()..sort((a, b) => b.value.accuracy.compareTo(a.value.accuracy));
+    final weakLessons = lessons.entries.toList()..sort((a, b) => a.value.accuracy.compareTo(b.value.accuracy));
     final recent = _recentHistory(cards, rangeDays);
 
     return Scaffold(
@@ -236,11 +236,10 @@ class _LessonStat {
 }
 
 class _DayStat {
-  const _DayStat({this.date = const _zeroDate(), this.reviewed = 0, this.correct = 0});
+  const _DayStat({this.date = const DateTime(2000), this.reviewed = 0, this.correct = 0});
   final DateTime date;
   final int reviewed;
   final int correct;
   _DayStat copyWith({DateTime? date, int? reviewed, int? correct}) => _DayStat(date: date ?? this.date, reviewed: reviewed ?? this.reviewed, correct: correct ?? this.correct);
 }
 
-DateTime _zeroDate() => DateTime(2000);
