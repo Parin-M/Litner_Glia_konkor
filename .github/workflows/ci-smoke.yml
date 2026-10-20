@@ -2,14 +2,53 @@ name: CI Smoke Test
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - name: Runner check
-        run: echo "GitHub Actions runner is working"
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Validate offline card and question data
+        run: python tool/validate_data.py
+
+      - name: Test Android build configuration scripts
+        run: python -m unittest discover -s tool -p 'test_*.py'
+
+      - name: Restore the launcher icon
+        run: base64 --decode assets/glia_app_icon.png.b64 > assets/glia_icon.png
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze Dart and Flutter code
+        run: flutter analyze
+
+      - name: Run bundled-data tests
+        run: flutter test
+
+      - name: Check Python build scripts compile
+        run: python -m compileall -q tool
+
+      - name: Check patch whitespace
+        run: git diff --check
